@@ -1,0 +1,78 @@
+defmodule Card.Game.CardCompareTest do
+  use ExUnit.Case
+  alias Raw.Game.{CardCompare, CardRule}
+
+  test "error for single" do
+    last = [7]
+    current = [6]
+
+    assert CardCompare.basic_compare(:single, last, current) == {:error}
+  end
+
+  test "error&success for pair" do
+    last = [7, 7]
+    current_fail = [6, 6]
+    current_success = [10, 10]
+
+    assert CardCompare.basic_compare(:pairs, last, current_success) ==
+             {:ok, :pairs, current_success}
+
+    assert CardCompare.basic_compare(:pairs, last, current_fail) == {:error}
+  end
+
+  test "success for full_house" do
+    last = [
+      [7, 7, 7],
+      [7, 7, 7, 1],
+      [7, 7, 7, 1, 1],
+      [6, 6, 6, 7, 7, 7],
+      [6, 6, 6, 7, 7, 7, 1, 2]
+    ]
+
+    current_success = [
+      [9, 9, 9],
+      [9, 9, 9, 3],
+      [9, 9, 9, 3, 3],
+      [8, 8, 8, 9, 9, 9],
+      [8, 8, 8, 9, 9, 9, 1, 1]
+    ]
+
+    for {l, curr} <- Enum.zip(last, current_success) do
+      {:ok, meta} = CardRule.check(l)
+      assert CardCompare.basic_compare(meta, l, curr) == {:ok, meta, curr}
+    end
+  end
+
+  test "error for full_house" do
+    last = [
+      [7, 7, 7],
+      [7, 7, 7, 1],
+      [7, 7, 7, 1, 1],
+      [6, 6, 6, 7, 7, 7],
+      [6, 6, 6, 7, 7, 7, 1, 2]
+    ]
+
+    current_success = [
+      [6, 6, 6],
+      [6, 6, 6, 7],
+      [6, 6, 6, 3, 3],
+      [3, 3, 3, 4, 4, 4],
+      [3, 3, 3, 4, 4, 4, 1, 1]
+    ]
+
+    for {l, curr} <- Enum.zip(last, current_success) do
+      {:ok, meta} = CardRule.check(l)
+      assert CardCompare.basic_compare(meta, l, curr) == {:error}
+    end
+  end
+
+  test "full_house after bomb" do
+    last = [3, 3, 3]
+    current = [6, 6, 6, 6]
+
+    {:ok, meta} = CardRule.check(last)
+    {:ok, type, _curr} = CardCompare.basic_compare(meta, last, current)
+    assert meta == {:full_house, 1, 0}
+    assert type == :bomb
+  end
+end

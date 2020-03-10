@@ -1,5 +1,6 @@
 defmodule Raw.Game.CardRule do
   alias Raw.Game.Helper
+
   @basic_card_types %{
     "straight" => :straight,
     "single" => :single,
@@ -12,30 +13,25 @@ defmodule Raw.Game.CardRule do
     Map.get(@basic_card_types, index)
   end
 
-  def basic_card_type(index) do
-    Enum.fetch(@basic_card_types, index)
-  end
-
-  #check straight
+  # check straight
   def check(cards) when length(cards) == 1 do
     {:ok, card_type("single")}
   end
 
   def check(cards) when length(cards) == 2 do
-    card_type = card_type("one_pair")
-    if Helper.all_eq(cards, card_type) == {:ok, card_type} do
-      {:ok, card_type}
-    else
-      {:error}
-    end
+    cards
+    |> Helper.pairs_check()
   end
 
   def check(cards) when length(cards) == 3 do
-    card_type = card_type("three_of_kind")
-    if Helper.all_eq(cards, card_type) == {:ok, card_type} do
-      {:ok, card_type}
+    with {:ok, meta_data} <- Helper.full_house_check(cards) do
+      if meta_data == {:full_house, 1, 0} do
+        {:ok, meta_data}
+      else
+        {:error}
+      end
     else
-      {:error}
+      {:error, msg} -> {:error, msg}
     end
   end
 
@@ -46,27 +42,29 @@ defmodule Raw.Game.CardRule do
   end
 
   def check(cards) when length(cards) == 5 do
-    full_house2 = &Helper.full_house_check(&1)
-    filter_rules(cards, [&straight/1, full_house2])
+    full_house = &Helper.full_house_check(&1)
+    filter_rules(cards, [&straight/1, full_house])
   end
 
-  def check(cards) when length(cards) == 6 do
+  def check(cards) when rem(length(cards), 2) == 0 and length(cards) >= 6 do
     full_house_check = &Helper.full_house_check(&1)
-    multi_pair_check = &Helper.one_pairs_check(&1)
+    multi_pair_check = &Helper.pairs_check(&1)
     filter_rules(cards, [&straight/1, full_house_check, multi_pair_check])
   end
 
   def check(cards) do
     case straight(cards) do
-      true -> {:ok, :straight}
-      false -> {:error}
+      {:ok, :straight} -> {:ok, :straight}
+      {:error} -> {:error}
     end
   end
 
   def filter_rules(cards, rule_list) do
-    filtered = rule_list
-               |> Enum.map(fn f -> f.(cards) end)
-               |> Enum.filter(fn x -> elem(x, 0) == :ok end)
+    filtered =
+      rule_list
+      |> Enum.map(fn f -> f.(cards) end)
+      |> Enum.filter(fn x -> elem(x, 0) == :ok end)
+
     if length(filtered) > 0 do
       hd(filtered)
     else
@@ -76,11 +74,11 @@ defmodule Raw.Game.CardRule do
 
   def straight(cards) do
     result = Helper.diff_one(cards)
+
     if result == {:ok} do
       {:ok, :straight}
     else
       {:error}
     end
   end
-
 end
