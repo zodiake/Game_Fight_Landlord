@@ -1,6 +1,6 @@
 defmodule Card.Game.CardCompareTest do
   use ExUnit.Case
-  alias Raw.Game.{CardCompare, CardRule}
+  alias Raw.Game.{CardCompare, CardRuleSelector}
 
   test "error for single" do
     last = [7]
@@ -38,7 +38,7 @@ defmodule Card.Game.CardCompareTest do
     ]
 
     for {l, curr} <- Enum.zip(last, current_success) do
-      {:ok, meta} = CardRule.check(l)
+      {:ok, meta} = CardRuleSelector.select_type(l)
       assert CardCompare.basic_compare(meta, l, curr) == {:ok, meta, curr}
     end
   end
@@ -61,7 +61,7 @@ defmodule Card.Game.CardCompareTest do
     ]
 
     for {l, curr} <- Enum.zip(last, current_success) do
-      {:ok, meta} = CardRule.check(l)
+      {:ok, meta} = CardRuleSelector.select_type(l)
       assert CardCompare.basic_compare(meta, l, curr) == {:error}
     end
   end
@@ -70,7 +70,7 @@ defmodule Card.Game.CardCompareTest do
     last = [3, 3, 3]
     current = [6, 6, 6, 6]
 
-    {:ok, meta} = CardRule.check(last)
+    {:ok, meta} = CardRuleSelector.select_type(last)
     {:ok, type, _curr} = CardCompare.basic_compare(meta, last, current)
     assert meta == {:full_house, 1, 0}
     assert type == :bomb
