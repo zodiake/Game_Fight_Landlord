@@ -1,4 +1,5 @@
 defmodule Card.Game.CardCompareTest do
+  @moduledoc false
   use ExUnit.Case
   alias Raw.Game.{CardCompare, CardRuleSelector}
 
