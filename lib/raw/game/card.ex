@@ -1,5 +1,6 @@
 defmodule Raw.Game.Card do
   @moduledoc false
+  alias __MODULE__
 
   @colors [:splade, :club, :hearts, :diamond]
   defstruct [:color, :value, :display_value]
