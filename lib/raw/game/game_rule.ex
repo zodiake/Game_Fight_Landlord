@@ -3,31 +3,23 @@ defmodule Raw.Game.GameRule do
   @moduledoc false
   @max_entered 3
   defstruct state: :waiting_start,
-            absent: [:player1, :player2, :player3],
             player1: :not_set,
             player2: :not_set,
             player3: :not_set
 
   def new(), do: %GameRule{}
 
-  def check(%GameRule{state: :waiting_start} = game_rule, :add_player) do
-    if length(game_rule.absent) == 0 do
-      :error
-    else
-      key = hd(game_rule.absent)
+  def check(%GameRule{state: :waiting_start} = game_rule, {:add_player, player}) do
+    case Map.fetch!(game_rule, player) do
+      :not_set ->
+        rules =
+          game_rule
+          |> Map.put(player, :joined_room)
 
-      case Map.fetch!(game_rule, key) do
-        :not_set ->
-          rules =
-            game_rule
-            |> Map.put(key, :joined_room)
-            |> Map.put(:absent, tl(game_rule.absent))
+        {:ok, rules}
 
-          {:ok, rules}
-
-        _ ->
-          :error
-      end
+      _ ->
+        :error
     end
   end
 
@@ -39,7 +31,7 @@ defmodule Raw.Game.GameRule do
           |> Map.put(player, :get_ready)
 
         if all_players_get_ready(rules) do
-          {:ok, %GameRule{rules | state: :game_started}}
+          {:ok, %GameRule{rules | state: :deal_cards}}
         else
           {:ok, rules}
         end
@@ -49,31 +41,11 @@ defmodule Raw.Game.GameRule do
     end
   end
 
-  def check(%GameRule{state: :game_start} = game_rule, {:deal_finished, landlord_player}) do
-    case landlord_player do
-      :player1 -> {:ok, %GameRule{game_rule | state: :landlord_player1}}
-      :player2 -> {:ok, %GameRule{game_rule | state: :landlord_player2}}
-      :player3 -> {:ok, %GameRule{game_rule | state: :landlord_player3}}
-    end
+  def check(%GameRule{state: :deal_cards} = game_rule, :deal_finished) do
+    {:ok, %{game_rule | state: :landlord_selection}}
   end
 
-  def check(%GameRule{state: :landlord_player1} = game_rule, {:landload_finished, player}) do
-    case player do
-      :player1 -> {:ok, %GameRule{game_rule | state: :player1_turn}}
-      :player2 -> {:ok, %GameRule{game_rule | state: :player2_turn}}
-      :player3 -> {:ok, %GameRule{game_rule | state: :player3_turn}}
-    end
-  end
-
-  def check(%GameRule{state: :landlord_player2} = game_rule, {:landload_finished, player}) do
-    case player do
-      :player1 -> {:ok, %GameRule{game_rule | state: :player1_turn}}
-      :player2 -> {:ok, %GameRule{game_rule | state: :player2_turn}}
-      :player3 -> {:ok, %GameRule{game_rule | state: :player3_turn}}
-    end
-  end
-
-  def check(%GameRule{state: :landlord_player3} = game_rule, {:landload_finished, player}) do
+  def check(%GameRule{state: :landlord_selection} = game_rule, {:landload_seleced, player}) do
     case player do
       :player1 -> {:ok, %GameRule{game_rule | state: :player1_turn}}
       :player2 -> {:ok, %GameRule{game_rule | state: :player2_turn}}

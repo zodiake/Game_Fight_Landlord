@@ -17,7 +17,7 @@ defmodule Raw.Game.Card do
           v <- 3..15 do
         %Card{}
         |> Map.put(:color, c)
-        |> Map.put(:value, to_string(v))
+        |> Map.put(:value, v)
         |> Map.put(:display_value, display_value(v))
       end
 

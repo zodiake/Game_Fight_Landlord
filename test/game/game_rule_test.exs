@@ -6,9 +6,9 @@ defmodule Raw.Game.GameRuleTest do
   def after_join() do
     rule = GameRule.new()
 
-    with {:ok, rules1} <- GameRule.check(rule, :add_player),
-         {:ok, rules2} <- GameRule.check(rules1, :add_player),
-         {:ok, rules3} <- GameRule.check(rules2, :add_player) do
+    with {:ok, rules1} <- GameRule.check(rule, {:add_player, :player1}),
+         {:ok, rules2} <- GameRule.check(rules1, {:add_player, :player2}),
+         {:ok, rules3} <- GameRule.check(rules2, {:add_player, :player3}) do
       rules3
     else
       :error -> IO.inspect(:error)
@@ -31,7 +31,7 @@ defmodule Raw.Game.GameRuleTest do
             |> GameRule.check({:get_ready, :player2})
             |> elem(1)
             |> GameRule.check({:get_ready, :player3})
-    assert elem(rules, 1).state == :game_started
+    assert elem(rules, 1).state == :deal_cards
   end
 
 end
