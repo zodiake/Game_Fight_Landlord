@@ -22,13 +22,14 @@ defmodule Raw.Game.GameTest do
     |> Game.player_get_ready(p1)
     game
     |> Game.player_get_ready(p2)
-    p = game
-        |> Game.player_get_ready(p3)
-        |> IO.inspect()
+    %{rules: rule} = game
+                     |> Game.player_get_ready(p3)
+                     |> IO.inspect()
 
 
     assert p1 == :player1
     assert p2 == :player2
     assert p3 == :player3
+    assert rule.state == :deal_cards
   end
 end
