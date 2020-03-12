@@ -24,7 +24,6 @@ defmodule Raw.Game.GameTest do
     |> Game.player_get_ready(p2)
     %{rules: rule} = game
                      |> Game.player_get_ready(p3)
-                     |> IO.inspect()
 
 
     assert p1 == :player1
