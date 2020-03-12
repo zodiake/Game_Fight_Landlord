@@ -6,9 +6,9 @@ defmodule Raw.Game.GameRuleTest do
   def after_join() do
     rule = GameRule.new()
 
-    with {:ok, rules1} <- GameRule.check(rule, {:add_player, :player1}),
-         {:ok, rules2} <- GameRule.check(rules1, {:add_player, :player2}),
-         {:ok, rules3} <- GameRule.check(rules2, {:add_player, :player3}) do
+    with {:ok, rules1} <- GameRule.check(rule, :add_player),
+         {:ok, rules2} <- GameRule.check(rules1, :add_player),
+         {:ok, rules3} <- GameRule.check(rules2, :add_player) do
       rules3
     else
       :error -> IO.inspect(:error)
@@ -18,28 +18,20 @@ defmodule Raw.Game.GameRuleTest do
   test "game rule should deal cards when all join" do
     rules = GameRuleTest.after_join()
 
-    assert rules.state == :game_start
+    assert rules.state == :waiting_start
+
+    assert GameRule.check(rules, :add_player) == :error
   end
 
-  test "game state should be landlord_player1 after deal finished" do
+  test "game should start after all player get_ready" do
     rules = GameRuleTest.after_join()
-
-    {:ok, rule} =
-      rules
-      |> GameRule.check({:deal_finished, :player1})
-
-    assert rule.state == :landlord_player1
+    rules = rules
+            |> GameRule.check({:get_ready, :player1})
+            |> elem(1)
+            |> GameRule.check({:get_ready, :player2})
+            |> elem(1)
+            |> GameRule.check({:get_ready, :player3})
+    assert elem(rules, 1).state == :game_started
   end
 
-  test "after landlord_finished player2 game should be player2_turn" do
-    rules = GameRuleTest.after_join()
-
-    {:ok, rules} =
-      rules
-      |> GameRule.check({:deal_finished, :player1})
-
-    {:ok, rules} = GameRule.check(rules, {:landload_finished, :player2})
-
-    assert rules.state == :player2_turn
-  end
 end

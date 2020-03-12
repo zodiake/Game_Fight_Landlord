@@ -2,23 +2,44 @@ defmodule Raw.Game.GameRule do
   alias __MODULE__
   @moduledoc false
   @max_entered 3
-  defstruct state: :waiting_players,
+  defstruct state: :waiting_start,
+            absent: [:player1, :player2, :player3],
             player1: :not_set,
             player2: :not_set,
             player3: :not_set
 
   def new(), do: %GameRule{}
 
-  def check(%GameRule{state: :waiting_players} = game_rule, {:add_player, player}) do
+  def check(%GameRule{state: :waiting_start} = game_rule, :add_player) do
+    if length(game_rule.absent) == 0 do
+      :error
+    else
+      key = hd(game_rule.absent)
+
+      case Map.fetch!(game_rule, key) do
+        :not_set ->
+          rules =
+            game_rule
+            |> Map.put(key, :joined_room)
+            |> Map.put(:absent, tl(game_rule.absent))
+
+          {:ok, rules}
+
+        _ ->
+          :error
+      end
+    end
+  end
+
+  def check(%GameRule{state: :waiting_start} = game_rule, {:get_ready, player}) do
     case Map.fetch!(game_rule, player) do
-      :not_set ->
+      :joined_room ->
         rules =
           game_rule
           |> Map.put(player, :get_ready)
-          |> Map.put(:state, :waiting_players)
 
         if all_players_get_ready(rules) do
-          {:ok, %GameRule{rules | state: :game_start}}
+          {:ok, %GameRule{rules | state: :game_started}}
         else
           {:ok, rules}
         end
@@ -63,9 +84,11 @@ defmodule Raw.Game.GameRule do
   def check(%GameRule{state: :player1_turn} = game_rule, {:play, :player1}) do
     {:ok, %GameRule{game_rule | state: :play2_turn}}
   end
+
   def check(%GameRule{state: :player2_turn} = game_rule, {:play, :player2}) do
     {:ok, %GameRule{game_rule | state: :play3_turn}}
   end
+
   def check(%GameRule{state: :player3_turn} = game_rule, {:play, :player3}) do
     {:ok, %GameRule{game_rule | state: :play1_turn}}
   end
@@ -97,4 +120,8 @@ defmodule Raw.Game.GameRule do
     rules.player1 == :get_ready && rules.player2 == :get_ready && rules.player3 == :get_ready
   end
 
+  def all_players_joined(rules) do
+    rules.player1 == :joined_room && rules.player2 == :joined_room &&
+      rules.player3 == :joined_room
+  end
 end
