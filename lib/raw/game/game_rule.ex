@@ -8,7 +8,7 @@ defmodule Raw.Game.GameRule do
             player1: :not_set,
             player2: :not_set,
             source_landlord: nil,
-            give_up: nil,
+            give_up: [],
             landlord: nil
 
   def new(), do: %GameRule{}
@@ -56,7 +56,7 @@ defmodule Raw.Game.GameRule do
         %GameRule{state: :landlord_electing} = game_rule,
         {:pass_or_accept, pass_or_accept, player}
       ) do
-    if player_can_electing_landlord(player, game_rule) do
+    if player_can_participate_electing(player, game_rule) do
       case pass_or_accept do
         :pass ->
           new_rule =
@@ -125,7 +125,7 @@ defmodule Raw.Game.GameRule do
   def random_landlord(), do: Enum.random([:player0, :player1, :player2])
 
   def update_give_up(rule, player) do
-    if rule.give_up == nil do
+    if rule.give_up == [] do
       %GameRule{rule | give_up: [player]}
     else
       %GameRule{rule | give_up: [player | rule.give_up]}
@@ -134,19 +134,19 @@ defmodule Raw.Game.GameRule do
 
   def update_state(rule, state), do: %GameRule{rule | state: state}
 
-  def player_can_electing_landlord(player, rule) do
-    case rule.give_up do
+  def player_can_participate_electing(player, rule) do
+    case rule.landlord do
       nil ->
-        true
-
-      [_ | _] ->
         containers = Enum.member?(rule.give_up, player)
 
-        if containers == false && rule.landlord == nil do
+        if containers == false do
           true
         else
           false
         end
+
+      _ ->
+        false
     end
   end
 

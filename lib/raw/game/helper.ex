@@ -146,4 +146,5 @@ defmodule Raw.Game.Helper do
   defp get_value_length(maps, keys) do
     length(Map.fetch!(maps, hd(keys)))
   end
+
 end
