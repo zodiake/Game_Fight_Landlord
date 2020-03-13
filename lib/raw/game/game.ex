@@ -12,16 +12,15 @@ defmodule Raw.Game.Game do
 
   def player_get_ready(game, player), do: GenServer.call(game, {:get_ready, player})
 
-  def landlord(game, player), do: GenServer.call(game, {:landlord_selected, player})
+  def select_landlord(game, player), do: GenServer.call(game, {:landlord_selected, player})
 
   def handle_call(:add_player, _from, state) do
-    with {:ok, key, new_state} <- choose_absent(state),
-         {:ok, rules} <- GameRule.check(new_state.rules, {:add_player, key}) do
-      s =
-        new_state
+    with {:ok, player, rules} <- GameRule.check(state.rules, :add_player) do
+      new_state =
+        state
         |> update_rules(rules)
 
-      {:reply, player_key(s), s}
+      {:reply, player, new_state}
     else
       :error -> {:reply, :error, state}
     end
@@ -30,18 +29,9 @@ defmodule Raw.Game.Game do
   def handle_call({:get_ready, player}, _from, state) do
     with {:ok, rules} <- GameRule.check(state.rules, {:get_ready, player}) do
       if rules.state == :deal_cards do
-        new_state =
-          state
-          |> update_rules(rules)
-          |> deal_cards()
-
-        with {:ok, r} <- GameRule.check(Map.fetch!(new_state, :rules), :deal_finished) do
-          new_state
-          |> update_rules(r)
-          |> reply_success(new_state)
-        else
-          :error -> {:reply, :error, new_state}
-        end
+        state
+        |> deal_cards(rules)
+        |> deal_finished()
       else
         state
         |> update_rules(rules)
@@ -81,7 +71,6 @@ defmodule Raw.Game.Game do
       player3: player3,
       landlord: landlord,
       rules: rule,
-      absent: [:player1, :player2, :player3],
       game_id: guid
     }
   end
@@ -105,13 +94,14 @@ defmodule Raw.Game.Game do
     end
   end
 
-  def update_hands(state, player, cards), do: put_in(state, [player, :hands], Enum.sort_by(cards, fn x -> x.value end))
+  def update_hands(state, player, cards),
+      do: put_in(state, [player, :hands], Enum.sort_by(cards, fn x -> x.value end))
 
   def update_landlord(state, player) do
     put_in(state.landlord.player, player)
   end
 
-  def deal_cards(state) do
+  def deal_cards(state, rules) do
     [f, s, t, l] =
       Card.new()
       |> Card.shuffle()
@@ -122,5 +112,16 @@ defmodule Raw.Game.Game do
     |> update_hands(:player2, s)
     |> update_hands(:player3, t)
     |> update_hands(:landlord, l)
+    |> update_rules(rules)
+  end
+
+  def deal_finished(state) do
+    with {:ok, rules} <- GameRule.check(Map.fetch!(state, :rules), :deal_finished) do
+      state
+      |> update_rules(rules)
+      |> reply_success(state)
+    else
+      :error -> {:reply, :error, state}
+    end
   end
 end
