@@ -52,13 +52,13 @@ defmodule Raw.Game.GameRuleTest do
 
     {:ok, _, nr} =
       rules
-      |> GameRule.check({:pass_or_accept, :pass, rules.source_landlord})
+      |> GameRule.check({:pass_landlord, rules.source_landlord})
 
     assert nr.give_up == [rules.source_landlord]
     assert nr.state == :landlord_electing
     landlord = GameRule.next_player(rules.source_landlord)
     {:ok, nnr} = nr
-                 |> GameRule.check({:pass_or_accept, :accept, landlord})
+                 |> GameRule.check({:accept_landlord, landlord})
     assert nnr.state == String.to_atom(to_string(landlord) <> "_turn")
   end
 end

@@ -52,27 +52,26 @@ defmodule Raw.Game.GameRule do
     {:ok, %{game_rule | state: :landlord_electing, source_landlord: random_landlord()}}
   end
 
-  def check(
-        %GameRule{state: :landlord_electing} = game_rule,
-        {:pass_or_accept, pass_or_accept, player}
-      ) do
+  def check(%GameRule{state: :landlord_electing} = game_rule, {:pass_landlord, player}) do
     if player_can_participate_electing(player, game_rule) do
-      case pass_or_accept do
-        :pass ->
-          new_rule =
-            game_rule
-            |> update_give_up(player)
+      new_rule =
+        game_rule
+        |> update_give_up(player)
 
-          {:ok, next_player(player), new_rule}
+      {:ok, next_player(player), new_rule}
+    else
+      :error
+    end
+  end
 
-        :accept ->
-          new_rule =
-            game_rule
-            |> update_give_up(player)
-            |> update_state(String.to_atom(to_string(player) <> "_turn"))
+  def check(%GameRule{state: :landlord_electing} = game_rule, {:accept_landlord, player}) do
+    if player_can_participate_electing(player, game_rule) do
+      new_rule =
+        game_rule
+        |> update_give_up(player)
+        |> update_state(String.to_atom(to_string(player) <> "_turn"))
 
-          {:ok, %GameRule{new_rule | landlord: player}}
-      end
+      {:ok, %GameRule{new_rule | landlord: player}}
     else
       :error
     end
