@@ -18,7 +18,7 @@ defmodule Raw.Game.Game do
   def accept_landlord(game, player),
       do: GenServer.call(game, {:accept_landlord, player})
 
-  def player_round(game, player, cards), do: GenServer.call(game, {:play, player, cards})
+  def play_round(game, player, cards), do: GenServer.call(game, {:play, player, cards})
 
   def pass_round(game, player), do: GenServer.call(game, {:pass, player})
 
@@ -189,6 +189,7 @@ defmodule Raw.Game.Game do
   end
 
   def remove_hands(state, player, cards) do
+    IO.inspect(player, label: "player")
     new_hands = Enum.filter(get_in(state, [player, :hands]), fn x -> !Enum.member?(cards, x) end)
     put_in(state, [player, :hands], new_hands)
   end
