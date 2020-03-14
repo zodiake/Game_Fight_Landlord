@@ -33,12 +33,13 @@ defmodule Raw.Game.GameTest do
     assert s.rules.state == String.to_atom(to_string(player0) <> "_turn")
 
     first = [hd(s[player0][:hands])]
-    player1 = Game.player_round(Game.via(1), player0, first)
+    player1_turn = Game.player_round(Game.via(1), player0, first)
     state = :sys.get_state(Game.via(1))
-    assert player1 == next_turn(player0)
+    assert player1_turn == next_turn(player0)
     assert length(state.rules.round_cards) == 1
 
-    player2 = Game.pass_round(Game.via(1), turn_to_player(player1))
+    player2_turn = Game.pass_round(Game.via(1), turn_to_player(player1_turn))
+    assert player2_turn == next_turn(turn_to_player(player1_turn))
   end
 
   def next_turn(player) do
