@@ -48,7 +48,12 @@ defmodule Raw.Game.GameTest do
     assert state.rules.round_cards == []
 
 
+    state = :sys.get_state(Game.via(1))
+    first = [hd(state[player0][:hands])]
     player1_turn = Game.player_round(Game.via(1), player0, first)
+    player1 = turn_to_player(player1_turn)
+    player1_cards = Enum.find(state[player1][:hands], &(&1.value > first.value))
+    player2_turn = Game.player_round(Game.via(1), turn_to_player(player1_turn), player1_cards)
 
   end
 
