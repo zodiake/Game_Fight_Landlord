@@ -13,10 +13,10 @@ defmodule Raw.Game.Game do
   def player_get_ready(game, player), do: GenServer.call(game, {:get_ready, player})
 
   def pass_landlord(game, player),
-      do: GenServer.call(game, {:pass_landlord, player})
+    do: GenServer.call(game, {:pass_landlord, player})
 
   def accept_landlord(game, player),
-      do: GenServer.call(game, {:accept_landlord, player})
+    do: GenServer.call(game, {:accept_landlord, player})
 
   def play_round(game, player, cards), do: GenServer.call(game, {:play, player, cards})
 
@@ -83,19 +83,27 @@ defmodule Raw.Game.Game do
           |> remove_hands(player, cards)
           |> reply_success(new_rule.state)
         else
-          :error -> {:reply, :error, state}
+          :error ->
+            IO.inspect(111)
+            {:reply, :error, state}
         end
 
       last ->
         with {:ok, new_rule} <- GameRule.check(state.rules, {:play, player}),
-             {:ok, meta} <- CardCompare.compare(cards, state.last.meta, state.last.card) do
+             {:ok, meta} <-
+               CardCompare.compare(
+                 Enum.map(cards, & &1.value),
+                 state.last.meta,
+                 Enum.map(state.last.card, & &1.value)
+               ) do
           state
           |> update_last_cards_and_type(cards, meta)
           |> update_rules(new_rule)
           |> remove_hands(player, cards)
           |> reply_success(new_rule.state)
         else
-          :error -> {:reply, :error, state}
+          :error ->
+            {:reply, :error, state}
         end
     end
   end
@@ -157,7 +165,7 @@ defmodule Raw.Game.Game do
   def reply_success(state), do: {:reply, state, state}
 
   def update_hands(state, player, cards),
-      do: put_in(state, [player, :hands], Enum.sort_by(cards, fn x -> x.value end))
+    do: put_in(state, [player, :hands], Enum.sort_by(cards, fn x -> x.value end))
 
   def deal_cards(state, rules) do
     [f, s, t, l] =
@@ -189,7 +197,6 @@ defmodule Raw.Game.Game do
   end
 
   def remove_hands(state, player, cards) do
-    IO.inspect(player, label: "player")
     new_hands = Enum.filter(get_in(state, [player, :hands]), fn x -> !Enum.member?(cards, x) end)
     put_in(state, [player, :hands], new_hands)
   end

@@ -46,17 +46,23 @@ defmodule Raw.Game.GameTest do
     player0_turn = Game.pass_round(Game.via(1), turn_to_player(player2_turn))
     state = :sys.get_state(Game.via(1))
     assert state.rules.round_cards == []
+    assert state.last.card == nil
+    assert state.last.meta == nil
     assert length(state[player0][:hands]) == 16
     assert length(state[player1][:hands]) == 17
     assert length(state[player2][:hands]) == 17
+    assert state.rules.state == player0_turn
 
     # first play0:play->player1:play->player2:pass->player0:pass->player1_turn
     state = :sys.get_state(Game.via(1))
     first = [hd(state[player0][:hands])]
     Game.play_round(Game.via(1), player0, first)
     first1_all = state[player1][:hands]
+    state = :sys.get_state(Game.via(1))
+    assert state.last.meta == :single
     first1 = Enum.find(first1_all, fn x -> x.value > hd(first).value end)
-    Game.play_round(Game.via(1), player1, [first1])
+    a = Game.play_round(Game.via(1), player1, [first1])
+    IO.inspect(a)
     Game.pass_round(Game.via(1), player2)
     Game.pass_round(Game.via(1), player0)
 
