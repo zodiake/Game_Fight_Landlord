@@ -51,4 +51,8 @@ defmodule Raw.Game.Card do
       value - 13
     end
   end
+
+  def extract_card_value(cards) do
+    cards |> Enum.map(& &1.value)
+  end
 end

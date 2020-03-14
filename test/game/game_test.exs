@@ -1,7 +1,7 @@
 defmodule Raw.Game.GameTest do
   alias __MODULE__
   use ExUnit.Case
-  alias Raw.Game.Game
+  alias Raw.Game.{Game, GameRule}
 
   test "game should empty when init" do
     Game.start_link(%{guid: 1})
@@ -31,6 +31,11 @@ defmodule Raw.Game.GameTest do
 
     s = Game.accept_landlord(Game.via(1), next_player)
     assert s.rules.state == String.to_atom(to_string(next_player) <> "_turn")
+
+    out = [hd(get_in(s, [next_player, :hands]))]
+    nn_player = GameRule.next_player(next_player)
+    q = Game.player_round(Game.via(1), next_player, out)
+    assert q == String.to_atom(to_string(nn_player) <> "_turn")
 
   end
 end

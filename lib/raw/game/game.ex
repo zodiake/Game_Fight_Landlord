@@ -71,7 +71,11 @@ defmodule Raw.Game.Game do
   def handle_call({:play, player, cards}, _from, state) do
     case state.last_card do
       nil ->
-        with {:ok, meta} <- CardRuleSelector.select_type(cards),
+        with {:ok, meta} <-
+               CardRuleSelector.select_type(
+                 cards
+                 |> Card.extract_card_value()
+               ),
              {:ok, new_rule} <- GameRule.check(state.rules, {:play, player}) do
           state
           |> update_last_cards_and_type(cards, meta)
@@ -113,15 +117,15 @@ defmodule Raw.Game.Game do
   def fresh_state(guid) do
     player1 = %{name: nil, hands: nil, pools: nil}
     player2 = %{name: nil, hands: nil, pools: nil}
-    player3 = %{name: nil, hands: nil, pools: nil}
+    player0 = %{name: nil, hands: nil, pools: nil}
     landlord_cards = %{hands: nil}
 
     rule = GameRule.new()
 
     %{
+      player0: player0,
       player1: player1,
       player2: player2,
-      player3: player3,
       landlord_cards: landlord_cards,
       last_card: nil,
       last_card_meta: nil,
@@ -153,9 +157,9 @@ defmodule Raw.Game.Game do
       |> Card.deal_cards()
 
     state
-    |> update_hands(:player1, f)
-    |> update_hands(:player2, s)
-    |> update_hands(:player3, t)
+    |> update_hands(:player0, f)
+    |> update_hands(:player1, s)
+    |> update_hands(:player2, t)
     |> update_hands(:landlord_cards, l)
     |> update_rules(rules)
   end
@@ -177,6 +181,6 @@ defmodule Raw.Game.Game do
 
   def remove_hands(state, player, cards) do
     new_hands = Enum.filter(get_in(state, [player, :hands]), fn x -> !Enum.member?(cards, x) end)
-    update_in(state, [player, :hands], new_hands)
+    put_in(state, [player, :hands], new_hands)
   end
 end
