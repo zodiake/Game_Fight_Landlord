@@ -167,7 +167,7 @@ defmodule Raw.Game.GameRule do
         |> update_turn(hd(next_player))
         |> clear_round()
 
-      {:ok, new_rule}
+      {:ok, new_rule, :round_finish}
     else
       new_rule =
         rule

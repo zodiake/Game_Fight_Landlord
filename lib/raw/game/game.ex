@@ -13,10 +13,10 @@ defmodule Raw.Game.Game do
   def player_get_ready(game, player), do: GenServer.call(game, {:get_ready, player})
 
   def pass_landlord(game, player),
-    do: GenServer.call(game, {:pass_landlord, player})
+      do: GenServer.call(game, {:pass_landlord, player})
 
   def accept_landlord(game, player),
-    do: GenServer.call(game, {:accept_landlord, player})
+      do: GenServer.call(game, {:accept_landlord, player})
 
   def player_round(game, player, cards), do: GenServer.call(game, {:play, player, cards})
 
@@ -69,7 +69,7 @@ defmodule Raw.Game.Game do
   end
 
   def handle_call({:play, player, cards}, _from, state) do
-    case state.last_card do
+    case state.last.card do
       nil ->
         with {:ok, meta} <-
                CardRuleSelector.select_type(
@@ -88,7 +88,7 @@ defmodule Raw.Game.Game do
 
       last ->
         with {:ok, new_rule} <- GameRule.check(state.rules, {:play, player}),
-             {:ok, meta} <- CardCompare.compare(cards, state.last_card_meta, state.last_card) do
+             {:ok, meta} <- CardCompare.compare(cards, state.last.meta, state.last.card) do
           state
           |> update_last_cards_and_type(cards, meta)
           |> update_rules(new_rule)
@@ -101,12 +101,19 @@ defmodule Raw.Game.Game do
   end
 
   def handle_call({:pass, player}, _from, state) do
-    with {:ok, rules} <- GameRule.check(state.rules, {:pass, player}) do
+    with {:ok, rules, :round_finish} <- GameRule.check(state.rules, {:pass, player}) do
       state
       |> update_rules(rules)
+      |> clear_last()
       |> reply_success(rules.state)
     else
-      :error -> {:reply, :error, state}
+      {:ok, rules} ->
+        state
+        |> update_rules(rules)
+        |> reply_success(rules.state)
+
+      :error ->
+        {:reply, :error, state}
     end
   end
 
@@ -127,8 +134,10 @@ defmodule Raw.Game.Game do
       player1: player1,
       player2: player2,
       landlord_cards: landlord_cards,
-      last_card: nil,
-      last_card_meta: nil,
+      last: %{
+        card: nil,
+        meta: nil
+      },
       rules: rule,
       game_id: guid
     }
@@ -148,7 +157,7 @@ defmodule Raw.Game.Game do
   def reply_success(state), do: {:reply, state, state}
 
   def update_hands(state, player, cards),
-    do: put_in(state, [player, :hands], Enum.sort_by(cards, fn x -> x.value end))
+      do: put_in(state, [player, :hands], Enum.sort_by(cards, fn x -> x.value end))
 
   def deal_cards(state, rules) do
     [f, s, t, l] =
@@ -175,12 +184,17 @@ defmodule Raw.Game.Game do
   end
 
   def update_last_cards_and_type(state, cards, meta) do
-    new_state = put_in(state.last_card, cards)
-    put_in(new_state.last_card_meta, meta)
+    last = %{state.last | card: cards, meta: meta}
+    %{state | last: last}
   end
 
   def remove_hands(state, player, cards) do
     new_hands = Enum.filter(get_in(state, [player, :hands]), fn x -> !Enum.member?(cards, x) end)
     put_in(state, [player, :hands], new_hands)
+  end
+
+  def clear_last(state) do
+    last = %{state.last | card: nil, meta: nil}
+    %{state | last: last}
   end
 end
