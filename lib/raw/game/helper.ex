@@ -1,22 +1,13 @@
 defmodule Raw.Game.Helper do
-  @card_type %{
-    [3] => :full_house,
-    [1, 3] => :full_house1,
-    [2, 3] => :full_house2
-  }
+  def diff_one(cards) when length(cards) < 2 do
+    true
+  end
 
-  # shunzi
   def diff_one(cards) do
-    tail = tl(cards)
-
-    if tail == nil do
-      {:ok}
-    end
-
-    if Enum.all?(Enum.map(Enum.zip(cards, tail), fn {f, s} -> s - f end), fn x -> x == 1 end) do
-      {:ok}
+    if Enum.all?(Enum.map(Enum.zip(cards, tl(cards)), fn {f, s} -> s - f end), &(&1 == 1)) do
+      true
     else
-      {:error, "seems not straight"}
+      false
     end
   end
 
@@ -24,17 +15,9 @@ defmodule Raw.Game.Helper do
     head = hd(cards)
 
     if Enum.all?(tl(cards), fn x -> x == head end) do
-      {:ok}
+      :ok
     else
-      {:error}
-    end
-  end
-
-  def all_eq(cards, card_type) do
-    if all_eq(cards) == {:ok} do
-      {:ok, card_type}
-    else
-      {:error}
+      :error
     end
   end
 
@@ -48,12 +31,15 @@ defmodule Raw.Game.Helper do
     |> Enum.map(fn {_k, v} -> length(v) end)
   end
 
-  def is_bomb(cards) do
-    if length(cards) == 4 and all_eq(cards) == {:ok} do
-      {:ok}
-    else
-      {:error}
+  def is_bomb(cards) when length(cards) == 4 do
+    case all_eq(cards) do
+      :ok -> {:ok, :bomb}
+      :error -> :error
     end
+  end
+
+  def is_bomb(cards)  do
+    :error
   end
 
   def pairs_check(cards) do
@@ -62,15 +48,21 @@ defmodule Raw.Game.Helper do
     values = Map.values(grouped)
 
     if length(keys) >= 3 or length(keys) == 1 do
-      with {:ok} <- diff_one(keys),
-           true <- Enum.all?(values, fn x -> length(x) == 2 end) do
+      with true <- diff_one(keys),
+           true <- Enum.all?(values, &(length(&1) == 2)) do
         {:ok, :pairs}
       else
-        {:error, msg} -> {:error, msg}
-        false -> {:error, "not all one_pair"}
+        false -> :error
       end
     else
-      {:error}
+      :error
+    end
+  end
+
+  def straight_check(cards) do
+    case diff_one(cards) do
+      true -> {:ok, :straight}
+      false -> :error
     end
   end
 
@@ -105,46 +97,30 @@ defmodule Raw.Game.Helper do
       left_grouped
       |> Map.keys()
 
-    with {:ok} <- length_diff_check(three_keys),
-         {:ok} <- three_other_keys_can_pair(three_keys, left_keys, left_values) do
+    with true <- diff_one(three_keys),
+         :ok <- three_other_keys_can_pair(three_keys, left_keys, left_values) do
       if length(left_keys) == 0 do
         {:ok, {:full_house, length(three_keys), 0}}
       else
         {:ok, {:full_house, length(three_keys), div(length(left_values), length(three_keys))}}
       end
     else
-      {:error, msg} -> {:error, msg}
+      false -> :error
+      :error -> :error
     end
-  end
-
-  defp length_diff_check(keys) when length(keys) == 1 do
-    {:ok}
-  end
-
-  defp length_diff_check(keys) when length(keys) > 1 do
-    if diff_one(keys) == {:ok} do
-      {:ok}
-    else
-      {:error, "do not has a three pair"}
-    end
-  end
-
-  defp length_diff_check(_) do
-    {:error, "empty keys"}
   end
 
   defp three_other_keys_can_pair(three_keys, other_keys, other_values) do
     # attach card or do not attach card or attach card number is equal to three group count
     if length(three_keys) == length(other_keys) || length(other_keys) == 0 ||
          length(other_values) == length(three_keys) do
-      {:ok}
+      :ok
     else
-      {:error, "can not pair"}
+      :error
     end
   end
 
   defp get_value_length(maps, keys) do
     length(Map.fetch!(maps, hd(keys)))
   end
-
 end

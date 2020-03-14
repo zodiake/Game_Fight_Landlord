@@ -1,6 +1,6 @@
 defmodule Raw.Game.CardCompare do
   @moduledoc false
-  alias Raw.Game.{CardTypeCheck, Helper}
+  alias Raw.Game.{CardRule, Helper}
 
   def compare(curr_cards, :single, last_cards) do
     if hd(last_cards) < hd(curr_cards) do
@@ -52,9 +52,9 @@ defmodule Raw.Game.CardCompare do
     end
   end
 
-  def basic_compare(_current, _type, last) when length(last) == 0 do
-    with {:ok, type} <- CardTypeCheck.check(_type, _current) do
-      {:ok, type, _current}
+  def basic_compare(current, type, last) when length(last) == 0 do
+    with {:ok, new_type} <- CardRule.check(current, type) do
+      {:ok, new_type, current}
     else
       {:error} -> {:error, "seems not meet rule"}
       {:error, msg} -> {:error, msg}
@@ -73,7 +73,7 @@ defmodule Raw.Game.CardCompare do
   end
 
   def basic_compare(cards, type, last) do
-    if Helper.is_bomb(cards) == {:ok} do
+    if Helper.is_bomb(cards) == {:ok, :bomb} do
       {:ok, :bomb, cards}
     else
       compare(cards, type, last)

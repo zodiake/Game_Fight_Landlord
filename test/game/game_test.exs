@@ -4,14 +4,14 @@ defmodule Raw.Game.GameTest do
   alias Raw.Game.Game
 
   test "game should empty when init" do
-    game = Game.start_link(%{guid: 1})
+    Game.start_link(%{guid: 1})
     state = :sys.get_state(Game.via(1))
     assert state.game_id == 1
     assert state.rules.state == :waiting_start
   end
 
   test "after player join game should set player" do
-    game = Game.start_link(%{guid: 1})
+    Game.start_link(%{guid: 1})
     Game.player_join(Game.via(1))
     Game.player_join(Game.via(1))
     Game.player_join(Game.via(1))
@@ -31,5 +31,6 @@ defmodule Raw.Game.GameTest do
 
     s = Game.accept_landlord(Game.via(1), next_player)
     assert s.rules.state == String.to_atom(to_string(next_player) <> "_turn")
+
   end
 end

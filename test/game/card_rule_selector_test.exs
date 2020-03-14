@@ -1,45 +1,50 @@
-defmodule CardRuleSelectorTest do
-  @moduledoc false
+defmodule Raw.Game.CardRuleSelectorTest do
   use ExUnit.Case
-  alias Raw.Game.CardRule
-  @context CardRule
+  alias Raw.Game.CardRuleSelector
 
-  test "full house with 1 three without attachment" do
-    assert @context.check([3, 3, 3], {:full_house, 1, 0}) == {:ok, {:full_house, 1, 0}}
+  test "single card(1)" do
+    assert CardRuleSelector.select_type([2]) == {:ok, :single}
   end
 
-  test "full house with 1 three 1 left" do
-    assert @context.check([3, 3, 3, 1], {:full_house, 1, 1}) == {:ok, {:full_house, 1, 1}}
+  test "one pair(2)" do
+    assert CardRuleSelector.select_type([2, 2]) == {:ok, :pairs}
+    assert CardRuleSelector.select_type([1, 2]) == :error
   end
 
-  test "full house with 2 three 1 left" do
-    assert @context.check([3, 3, 3, 4, 4, 4, 2, 1], {:full_house, 2, 1}) ==
-             {:ok, {:full_house, 2, 1}}
+  test "three of kind(3)" do
+    assert CardRuleSelector.select_type([2, 2, 2]) == {:ok, {:full_house, 1, 0}}
+    assert CardRuleSelector.select_type([2, 2, 4]) == :error
   end
 
-  test "full house with 2 three with same attachment" do
-    assert @context.check([3, 3, 3, 4, 4, 4, 2, 2], {:full_house, 2, 1}) ==
-             {:ok, {:full_house, 2, 1}}
+  test "four cards(4)" do
+    assert CardRuleSelector.select_type([2, 2, 2, 1]) == {:ok, {:full_house, 1, 1}}
+    assert CardRuleSelector.select_type([2, 2, 2, 2]) == {:ok, :bomb}
+    assert CardRuleSelector.select_type([2, 2, 3, 1]) == :error
+    assert CardRuleSelector.select_type([2, 2, 3, 3]) == :error
   end
 
-  test "full house with 2 three without attachment" do
-    assert @context.check([3, 3, 3, 4, 4, 4], {:full_house, 2, 0}) ==
-             {:ok, {:full_house, 2, 0}}
+  test "five cards(5)" do
+    assert CardRuleSelector.select_type([2, 2, 2, 2, 1]) == :error
+    assert CardRuleSelector.select_type([2, 2, 2, 3, 3]) == {:ok, {:full_house, 1, 2}}
+    assert CardRuleSelector.select_type([4, 5, 6, 7, 8]) == {:ok, :straight}
   end
 
-  test "full house with 2 three with pair attachments" do
-    asserts = {:full_house, 2, 2}
-    assert @context.check([3, 3, 3, 4, 4, 4, 5, 5, 8, 8], asserts) == {:ok, asserts}
+  test "six cards(6)" do
+    assert CardRuleSelector.select_type([2, 2, 2, 3, 3, 3]) == {:ok, {:full_house, 2, 0}}
+    assert CardRuleSelector.select_type([4, 4, 5, 5, 6, 6]) == {:ok, :pairs}
+    assert CardRuleSelector.select_type([4, 5, 6, 7, 8, 9]) == {:ok, :straight}
+    assert CardRuleSelector.select_type([4, 4, 6, 6, 7, 7]) == :error
   end
 
-  test "pairs 2 or more pair" do
-    assert @context.check([3, 3], :pairs) == {:ok, :pairs}
-    assert @context.check([3, 3, 4, 4], :pairs) == {:error}
-    assert @context.check([3, 3, 4, 4, 5, 5], :pairs) == {:ok, :pairs}
+  test "seven cards(7)" do
+    assert CardRuleSelector.select_type([2, 2, 2, 3, 3, 3, 1]) == :error
+    assert CardRuleSelector.select_type([3, 4, 6, 7, 8, 9, 10]) == :error
+    assert CardRuleSelector.select_type([3, 4, 5, 6, 7, 8, 9]) == {:ok, :straight}
   end
 
-  test "straight" do
-    assert @context.check([4, 5, 6, 7, 8], :straight) == {:ok, :straight}
-    assert @context.check([4, 5, 6, 7], :straight) == {:error}
+  test "eight cards(8)" do
+    assert CardRuleSelector.select_type([2, 2, 2, 3, 3, 3, 6, 7]) == {:ok, {:full_house, 2, 1}}
+    assert CardRuleSelector.select_type([2, 2, 3, 3, 4, 4, 5, 5]) == {:ok, :pairs}
+    assert CardRuleSelector.select_type([3, 4, 5, 6, 7, 8, 9, 10]) == {:ok, :straight}
   end
 end

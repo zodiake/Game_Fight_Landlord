@@ -8,6 +8,7 @@ defmodule Raw.Game.GameRule do
             player1: :not_set,
             player2: :not_set,
             source_landlord: nil,
+            round_cards: [],
             give_up: [],
             landlord: nil
 
@@ -68,8 +69,7 @@ defmodule Raw.Game.GameRule do
     if player_can_participate_electing(player, game_rule) do
       new_rule =
         game_rule
-        |> update_give_up(player)
-        |> update_state(String.to_atom(to_string(player) <> "_turn"))
+        |> update_turn(player)
 
       {:ok, %GameRule{new_rule | landlord: player}}
     else
@@ -77,16 +77,20 @@ defmodule Raw.Game.GameRule do
     end
   end
 
-  def check(%GameRule{state: :player1_turn} = game_rule, {:play, :player1}) do
-    {:ok, %GameRule{game_rule | state: :play2_turn}}
+  def check(%GameRule{state: turn} = game_rule, {:play, player}) do
+    if turn != String.to_atom(to_string(player) <> "_turn") do
+      :error
+    else
+      {:ok, game_rule |> update_turn(next_player(player))}
+    end
   end
 
-  def check(%GameRule{state: :player2_turn} = game_rule, {:play, :player2}) do
-    {:ok, %GameRule{game_rule | state: :play3_turn}}
-  end
-
-  def check(%GameRule{state: :player0_turn} = game_rule, {:play, :player0}) do
-    {:ok, %GameRule{game_rule | state: :play1_turn}}
+  def check(%GameRule{state: :player1_turn} = game_rule, {:pass, :player1}) do
+    if game_rule.round_cards == [] do
+      :error
+    else
+      update_round_cards(game_rule, game_rule.round_cards, :player1, :pass)
+    end
   end
 
   def check(%GameRule{state: :player0_turn} = game_rule, {:win_check, win_or_not}) do
@@ -133,6 +137,34 @@ defmodule Raw.Game.GameRule do
 
   def update_state(rule, state), do: %GameRule{rule | state: state}
 
+  def update_round_cards(rule, round_cards, passed_or_played, player)
+      when passed_or_played in [:passed, :played]
+      when length(round_cards) == 1 do
+    {:ok, rule |> add_round(%{player: player, play_or_pass: passed_or_played})}
+  end
+
+  def update_round_cards(rule, round_cards, passed_or_played, player)
+      when passed_or_played in [:passed, :played]
+      when length(round_cards) >= 2 do
+    last = hd(round_cards)
+
+    if last.type == :passed do
+      next_player =
+        Enum.filter([:player0, :player1, :player2], &(&1 != last.player and &1 != player))
+
+      new_rule =
+        rule
+        |> update_turn(next_player)
+        |> clear_round()
+
+      {:ok, new_rule}
+    else
+      new_rule = rule |> add_round(%{player: player, play_or_pass: passed_or_played})
+
+      {:ok, new_rule}
+    end
+  end
+
   def player_can_participate_electing(player, rule) do
     case rule.landlord do
       nil ->
@@ -147,6 +179,22 @@ defmodule Raw.Game.GameRule do
       _ ->
         false
     end
+  end
+
+  def update_turn(rule, player) when is_binary(player) do
+    state = String.to_atom(player <> "_turn")
+    update_state(rule, state)
+  end
+
+  def update_turn(rule, player) when is_atom(player) do
+    state = String.to_atom(to_string(player) <> "_turn")
+    update_state(rule, state)
+  end
+
+  def clear_round(rule), do: %GameRule{rule | round_cards: []}
+
+  def add_round(rule, %{player: player, play_or_pass: type} = round) do
+    %GameRule{rule | round_cards: [round | rule.round_cards]}
   end
 
   def next_player(player) do

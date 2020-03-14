@@ -1,6 +1,6 @@
 defmodule Raw.Game.Game do
   use GenServer
-  alias Raw.Game.{Card, GameRule}
+  alias Raw.Game.{Card, GameRule, CardRuleSelector}
 
   def start_link(%{guid: guid} = params) do
     GenServer.start_link(__MODULE__, guid, name: via(params.guid))
@@ -13,10 +13,14 @@ defmodule Raw.Game.Game do
   def player_get_ready(game, player), do: GenServer.call(game, {:get_ready, player})
 
   def pass_landlord(game, player),
-      do: GenServer.call(game, {:pass_landlord, player})
+    do: GenServer.call(game, {:pass_landlord, player})
 
   def accept_landlord(game, player),
-      do: GenServer.call(game, {:accept_landlord, player})
+    do: GenServer.call(game, {:accept_landlord, player})
+
+  def player_round(game, player, cards), do: GenServer.call(game, {:play, player, cards})
+
+  def pass_round(game, player), do: GenServer.call(game, {:pass, player})
 
   def handle_call(:add_player, _from, state) do
     with {:ok, player, rules} <- GameRule.check(state.rules, :add_player) do
@@ -64,6 +68,23 @@ defmodule Raw.Game.Game do
     end
   end
 
+  def handle_call({:play, player, cards}, _from, state) do
+    with {} <- CardRuleSelector.select_type(cards),
+         {:ok, rules} <- GameRule.check(state.rules, {:pass, player}) do
+      state |> update_rules(rules) |> reply_success(rules.state)
+    else
+      :error -> {:reply, :error, state}
+    end
+  end
+
+  def handle_call({:pass, player}, _from, state) do
+    with {:ok, rules} <- GameRule.check(state.rules, {:pass, player}) do
+      state |> update_rules(rules) |> reply_success(rules.state)
+    else
+      :error -> {:reply, :error, state}
+    end
+  end
+
   def init(params) do
     {:ok, fresh_state(params)}
   end
@@ -81,6 +102,8 @@ defmodule Raw.Game.Game do
       player2: player2,
       player3: player3,
       landlord_cards: landlord_cards,
+      last_card: nil,
+      last_card_type: nil,
       rules: rule,
       game_id: guid
     }
@@ -99,16 +122,8 @@ defmodule Raw.Game.Game do
 
   def reply_success(state), do: {:reply, state, state}
 
-  def choose_absent(state) do
-    if length(state.absent) == 0 do
-      :error
-    else
-      {:ok, hd(state.absent), %{state | absent: tl(state.absent)}}
-    end
-  end
-
   def update_hands(state, player, cards),
-      do: put_in(state, [player, :hands], Enum.sort_by(cards, fn x -> x.value end))
+    do: put_in(state, [player, :hands], Enum.sort_by(cards, fn x -> x.value end))
 
   def deal_cards(state, rules) do
     [f, s, t, l] =
