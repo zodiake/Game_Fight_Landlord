@@ -6,13 +6,13 @@ defmodule Raw.Game.CardCompare do
     if hd(last_cards) < hd(curr_cards) do
       {:ok, :single}
     else
-      {:error}
+      :error
     end
   end
 
   def compare(cards, :straight, last) do
     if length(last) != length(cards) or hd(last) >= hd(cards) do
-      {:error}
+      :error
     else
       {:ok, :straight}
     end
@@ -30,7 +30,7 @@ defmodule Raw.Game.CardCompare do
       |> Enum.filter(fn {_k, v} -> length(v) == 3 end)
 
     if hd(current_keys) < hd(last_keys) do
-      {:error}
+      :error
     else
       {:ok, {:full_house, a, b}}
     end
@@ -46,7 +46,7 @@ defmodule Raw.Game.CardCompare do
 
   def compare(cards, :pairs, last) do
     if length(last) != length(cards) or hd(last) >= hd(cards) do
-      {:error}
+      :error
     else
       {:ok, :pairs}
     end
@@ -56,8 +56,8 @@ defmodule Raw.Game.CardCompare do
     with {:ok, new_type} <- CardRule.check(current, type) do
       {:ok, new_type}
     else
-      {:error} -> {:error, "seems not meet rule"}
-      {:error, msg} -> {:error, msg}
+      :error -> :error
+      {:error, msg} -> :error
     end
   end
 
@@ -68,7 +68,7 @@ defmodule Raw.Game.CardCompare do
     if Helper.is_bomb(cards) == {:ok} and compared_res == expected do
       expected
     else
-      {:error}
+      :error
     end
   end
 

@@ -7,7 +7,7 @@ defmodule Card.Game.CardCompareTest do
     last = [7]
     current = [6]
 
-    assert CardCompare.basic_compare(current, :single, last) == {:error}
+    assert CardCompare.basic_compare(current, :single, last) == :error
   end
 
   test "error&success for pair" do
@@ -18,7 +18,7 @@ defmodule Card.Game.CardCompareTest do
     assert CardCompare.basic_compare(current_success, :pairs, last) ==
              {:ok, :pairs}
 
-    assert CardCompare.basic_compare(current_fail, :pairs, last) == {:error}
+    assert CardCompare.basic_compare(current_fail, :pairs, last) == :error
   end
 
   test "success for full_house" do
@@ -63,7 +63,7 @@ defmodule Card.Game.CardCompareTest do
 
     for {l, curr} <- Enum.zip(last, current_success) do
       {:ok, meta} = CardRuleSelector.select_type(l)
-      assert CardCompare.basic_compare(curr, meta, l) == {:error}
+      assert CardCompare.basic_compare(curr, meta, l) == :error
     end
   end
 

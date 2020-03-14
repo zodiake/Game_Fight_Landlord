@@ -144,7 +144,7 @@ defmodule Raw.Game.GameRule do
 
   def update_round_cards(rule, round_cards, passed_or_played, player)
       when passed_or_played in [:passed, :played]
-           when length(round_cards) == 1 do
+      when length(round_cards) == 1 do
     new_rule =
       rule
       |> add_round(%{player: player, play_or_pass: passed_or_played})
@@ -155,16 +155,16 @@ defmodule Raw.Game.GameRule do
 
   def update_round_cards(rule, round_cards, passed_or_played, player)
       when passed_or_played in [:passed, :played]
-           when length(round_cards) >= 2 do
+      when length(round_cards) >= 2 do
     last = hd(round_cards)
 
-    if last.type == :passed do
+    if last.play_or_pass == :pass do
       next_player =
         Enum.filter([:player0, :player1, :player2], &(&1 != last.player and &1 != player))
 
       new_rule =
         rule
-        |> update_turn(next_player)
+        |> update_turn(hd(next_player))
         |> clear_round()
 
       {:ok, new_rule}

@@ -88,7 +88,7 @@ defmodule Raw.Game.Game do
 
       last ->
         with {:ok, new_rule} <- GameRule.check(state.rules, {:play, player}),
-             {:ok, meta} <- CardCompare.compare(cards, state.last_cards_meta, state.last_cards) do
+             {:ok, meta} <- CardCompare.compare(cards, state.last_card_meta, state.last_card) do
           state
           |> update_last_cards_and_type(cards, meta)
           |> update_rules(new_rule)

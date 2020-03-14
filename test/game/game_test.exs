@@ -10,7 +10,7 @@ defmodule Raw.Game.GameTest do
     assert state.rules.state == :waiting_start
   end
 
-  test "after player join game should set player" do
+  test "test landlord play card two passed and should landlord play" do
     Game.start_link(%{guid: 1})
     Game.player_join(Game.via(1))
     Game.player_join(Game.via(1))
@@ -39,7 +39,17 @@ defmodule Raw.Game.GameTest do
     assert length(state.rules.round_cards) == 1
 
     player2_turn = Game.pass_round(Game.via(1), turn_to_player(player1_turn))
+    state = :sys.get_state(Game.via(1))
     assert player2_turn == next_turn(turn_to_player(player1_turn))
+
+    player0_turn = Game.pass_round(Game.via(1), turn_to_player(player2_turn))
+    state = :sys.get_state(Game.via(1))
+    assert player0_turn == String.to_atom(to_string(player0) <> "_turn")
+    assert state.rules.round_cards == []
+
+
+    player1_turn = Game.player_round(Game.via(1), player0, first)
+
   end
 
   def next_turn(player) do
