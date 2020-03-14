@@ -81,15 +81,20 @@ defmodule Raw.Game.GameRule do
     if turn != String.to_atom(to_string(player) <> "_turn") do
       :error
     else
-      {:ok, game_rule |> update_turn(next_player(player))}
+      {
+        :ok,
+        game_rule
+        |> add_round(%{player: player, play_or_pass: :play})
+        |> update_turn(next_player(player))
+      }
     end
   end
 
-  def check(%GameRule{state: :player1_turn} = game_rule, {:pass, :player1}) do
+  def check(%GameRule{state: player_turn} = game_rule, {:pass, player}) do
     if game_rule.round_cards == [] do
       :error
     else
-      update_round_cards(game_rule, game_rule.round_cards, :player1, :pass)
+      update_round_cards(game_rule, game_rule.round_cards, :pass, player)
     end
   end
 
@@ -139,13 +144,18 @@ defmodule Raw.Game.GameRule do
 
   def update_round_cards(rule, round_cards, passed_or_played, player)
       when passed_or_played in [:passed, :played]
-      when length(round_cards) == 1 do
-    {:ok, rule |> add_round(%{player: player, play_or_pass: passed_or_played})}
+           when length(round_cards) == 1 do
+    new_rule =
+      rule
+      |> add_round(%{player: player, play_or_pass: passed_or_played})
+      |> update_turn(next_player(player))
+
+    {:ok, new_rule}
   end
 
   def update_round_cards(rule, round_cards, passed_or_played, player)
       when passed_or_played in [:passed, :played]
-      when length(round_cards) >= 2 do
+           when length(round_cards) >= 2 do
     last = hd(round_cards)
 
     if last.type == :passed do
@@ -159,7 +169,9 @@ defmodule Raw.Game.GameRule do
 
       {:ok, new_rule}
     else
-      new_rule = rule |> add_round(%{player: player, play_or_pass: passed_or_played})
+      new_rule =
+        rule
+        |> add_round(%{player: player, play_or_pass: passed_or_played})
 
       {:ok, new_rule}
     end

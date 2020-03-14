@@ -27,15 +27,25 @@ defmodule Raw.Game.GameTest do
     assert state.rules.player2 == :get_ready
     assert state.rules.state == :landlord_electing
 
-    next_player = Game.pass_landlord(Game.via(1), state.rules.source_landlord)
+    player0 = Game.pass_landlord(Game.via(1), state.rules.source_landlord)
 
-    s = Game.accept_landlord(Game.via(1), next_player)
-    assert s.rules.state == String.to_atom(to_string(next_player) <> "_turn")
+    s = Game.accept_landlord(Game.via(1), player0)
+    assert s.rules.state == String.to_atom(to_string(player0) <> "_turn")
 
-    out = [hd(get_in(s, [next_player, :hands]))]
-    nn_player = GameRule.next_player(next_player)
-    q = Game.player_round(Game.via(1), next_player, out)
-    assert q == String.to_atom(to_string(nn_player) <> "_turn")
+    first = [hd(s[player0][:hands])]
+    player1 = Game.player_round(Game.via(1), player0, first)
+    state = :sys.get_state(Game.via(1))
+    assert player1 == next_turn(player0)
+    assert length(state.rules.round_cards) == 1
 
+    player2 = Game.pass_round(Game.via(1), turn_to_player(player1))
+  end
+
+  def next_turn(player) do
+    String.to_atom(to_string(GameRule.next_player(player)) <> "_turn")
+  end
+
+  def turn_to_player(turn) do
+    String.to_atom(hd(String.split(to_string(turn), "_")))
   end
 end
