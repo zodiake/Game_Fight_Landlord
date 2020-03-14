@@ -4,7 +4,7 @@ defmodule Raw.Game.CardCompare do
 
   def compare(curr_cards, :single, last_cards) do
     if hd(last_cards) < hd(curr_cards) do
-      {:ok, :single, curr_cards}
+      {:ok, :single}
     else
       {:error}
     end
@@ -14,7 +14,7 @@ defmodule Raw.Game.CardCompare do
     if length(last) != length(cards) or hd(last) >= hd(cards) do
       {:error}
     else
-      {:ok, :straight, cards}
+      {:ok, :straight}
     end
   end
 
@@ -32,13 +32,13 @@ defmodule Raw.Game.CardCompare do
     if hd(current_keys) < hd(last_keys) do
       {:error}
     else
-      {:ok, {:full_house, a, b}, cards}
+      {:ok, {:full_house, a, b}}
     end
   end
 
   def compare(cards, :bomb, last) do
     if hd(cards) > hd(last) do
-      {:ok, :bomb, cards}
+      {:ok, :bomb}
     else
       {:error}
     end
@@ -48,13 +48,13 @@ defmodule Raw.Game.CardCompare do
     if length(last) != length(cards) or hd(last) >= hd(cards) do
       {:error}
     else
-      {:ok, :pairs, cards}
+      {:ok, :pairs}
     end
   end
 
   def basic_compare(current, type, last) when length(last) == 0 do
     with {:ok, new_type} <- CardRule.check(current, type) do
-      {:ok, new_type, current}
+      {:ok, new_type}
     else
       {:error} -> {:error, "seems not meet rule"}
       {:error, msg} -> {:error, msg}
@@ -74,7 +74,7 @@ defmodule Raw.Game.CardCompare do
 
   def basic_compare(cards, type, last) do
     if Helper.is_bomb(cards) == {:ok, :bomb} do
-      {:ok, :bomb, cards}
+      {:ok, :bomb}
     else
       compare(cards, type, last)
     end

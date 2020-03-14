@@ -1,6 +1,6 @@
 defmodule Raw.Game.Game do
   use GenServer
-  alias Raw.Game.{Card, GameRule, CardRuleSelector}
+  alias Raw.Game.{Card, GameRule, CardRuleSelector, CardCompare}
 
   def start_link(%{guid: guid} = params) do
     GenServer.start_link(__MODULE__, guid, name: via(params.guid))
@@ -69,17 +69,38 @@ defmodule Raw.Game.Game do
   end
 
   def handle_call({:play, player, cards}, _from, state) do
-    with {} <- CardRuleSelector.select_type(cards),
-         {:ok, rules} <- GameRule.check(state.rules, {:pass, player}) do
-      state |> update_rules(rules) |> reply_success(rules.state)
-    else
-      :error -> {:reply, :error, state}
+    case state.last_card do
+      nil ->
+        with {:ok, meta} <- CardRuleSelector.select_type(cards),
+             {:ok, new_rule} <- GameRule.check(state.rules, {:play, player}) do
+          state
+          |> update_last_cards_and_type(cards, meta)
+          |> update_rules(new_rule)
+          |> remove_hands(player, cards)
+          |> reply_success(new_rule.state)
+        else
+          :error -> {:reply, :error, state}
+        end
+
+      last ->
+        with {:ok, new_rule} <- GameRule.check(state.rules, {:play, player}),
+             {:ok, meta} <- CardCompare.compare(cards, state.last_cards_meta, state.last_cards) do
+          state
+          |> update_last_cards_and_type(cards, meta)
+          |> update_rules(new_rule)
+          |> remove_hands(player, cards)
+          |> reply_success(new_rule.state)
+        else
+          :error -> {:reply, :error, state}
+        end
     end
   end
 
   def handle_call({:pass, player}, _from, state) do
     with {:ok, rules} <- GameRule.check(state.rules, {:pass, player}) do
-      state |> update_rules(rules) |> reply_success(rules.state)
+      state
+      |> update_rules(rules)
+      |> reply_success(rules.state)
     else
       :error -> {:reply, :error, state}
     end
@@ -103,7 +124,7 @@ defmodule Raw.Game.Game do
       player3: player3,
       landlord_cards: landlord_cards,
       last_card: nil,
-      last_card_type: nil,
+      last_card_meta: nil,
       rules: rule,
       game_id: guid
     }
@@ -147,5 +168,15 @@ defmodule Raw.Game.Game do
     else
       :error -> {:reply, :error, state}
     end
+  end
+
+  def update_last_cards_and_type(state, cards, meta) do
+    new_state = put_in(state.last_card, cards)
+    put_in(new_state.last_card_meta, meta)
+  end
+
+  def remove_hands(state, player, cards) do
+    new_hands = Enum.filter(get_in(state, [player, :hands]), fn x -> !Enum.member?(cards, x) end)
+    update_in(state, [player, :hands], new_hands)
   end
 end

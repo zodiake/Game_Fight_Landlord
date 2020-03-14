@@ -22,13 +22,7 @@ defmodule Raw.Game.Helper do
   end
 
   def group_by_key(seq) do
-    seq
-    |> Enum.group_by(fn x -> x end)
-  end
-
-  def value_length(map) do
-    map
-    |> Enum.map(fn {_k, v} -> length(v) end)
+    seq |> Enum.group_by(& &1)
   end
 
   def is_bomb(cards) when length(cards) == 4 do
@@ -38,7 +32,7 @@ defmodule Raw.Game.Helper do
     end
   end
 
-  def is_bomb(cards)  do
+  def is_bomb(cards) do
     :error
   end
 
@@ -64,15 +58,6 @@ defmodule Raw.Game.Helper do
       true -> {:ok, :straight}
       false -> :error
     end
-  end
-
-  def keys_and_values(dict) do
-    {
-      dict
-      |> Map.keys(),
-      dict
-      |> Map.values()
-    }
   end
 
   def full_house_check(cards) do
@@ -118,9 +103,5 @@ defmodule Raw.Game.Helper do
     else
       :error
     end
-  end
-
-  defp get_value_length(maps, keys) do
-    length(Map.fetch!(maps, hd(keys)))
   end
 end
