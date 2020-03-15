@@ -11,8 +11,6 @@ defmodule Raw.Game.CardRule do
   end
 
   def check(cards, :pairs) do
-    result = Helper.pairs_check(cards)
-
     case Helper.pairs_check(cards) do
       :error -> :error
       {:ok, :pairs} -> {:ok, :pairs}
@@ -27,13 +25,13 @@ defmodule Raw.Game.CardRule do
         :error
       end
     else
-      {:error} -> :error
-      {:error, msg} -> :error
+      :error -> :error
+      {:error, _msg} -> :error
     end
   end
 
   def check(cards, :straight) do
-    if Helper.diff_one(cards) == :error or length(cards) < 5 do
+    if Helper.diff_one(cards) == false or length(cards) < 5 do
       :error
     else
       {:ok, :straight}

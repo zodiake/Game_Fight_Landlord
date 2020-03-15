@@ -2,8 +2,8 @@ defmodule Raw.Game.Game do
   use GenServer
   alias Raw.Game.{Card, GameRule, CardRuleSelector, CardCompare}
 
-  def start_link(%{guid: guid} = params) do
-    GenServer.start_link(__MODULE__, guid, name: via(params.guid))
+  def start_link(guid) do
+    GenServer.start_link(__MODULE__, guid, name: via(guid))
   end
 
   def via(name), do: {:via, Registry, {Registry.Game, name}}
@@ -24,11 +24,9 @@ defmodule Raw.Game.Game do
 
   def handle_call(:add_player, _from, state) do
     with {:ok, player, rules} <- GameRule.check(state.rules, :add_player) do
-      new_state =
-        state
-        |> update_rules(rules)
-
-      {:reply, player, new_state}
+      state
+      |> update_rules(rules)
+      |> reply_success(player)
     else
       :error -> {:reply, :error, state}
     end
@@ -40,6 +38,7 @@ defmodule Raw.Game.Game do
         state
         |> deal_cards(rules)
         |> deal_finished()
+        |> reply_success()
       else
         state
         |> update_rules(rules)
@@ -84,18 +83,12 @@ defmodule Raw.Game.Game do
           |> reply_success(new_rule.state)
         else
           :error ->
-            IO.inspect(111)
             {:reply, :error, state}
         end
 
-      last ->
+      _ ->
         with {:ok, new_rule} <- GameRule.check(state.rules, {:play, player}),
-             {:ok, meta} <-
-               CardCompare.compare(
-                 Enum.map(cards, & &1.value),
-                 state.last.meta,
-                 Enum.map(state.last.card, & &1.value)
-               ) do
+             {:ok, meta} <- Card.compare({cards, state.last.card}, state.last.meta) do
           state
           |> update_last_cards_and_type(cards, meta)
           |> update_rules(new_rule)
@@ -151,11 +144,6 @@ defmodule Raw.Game.Game do
     }
   end
 
-  def player_key(state) do
-    key = 3 - length(Map.fetch!(state, :absent))
-    String.to_existing_atom("player" <> to_string(key))
-  end
-
   def update_rules(state, rules) do
     %{state | rules: rules}
   end
@@ -185,7 +173,6 @@ defmodule Raw.Game.Game do
     with {:ok, rules} <- GameRule.check(Map.fetch!(state, :rules), :deal_finished) do
       state
       |> update_rules(rules)
-      |> reply_success()
     else
       :error -> {:reply, :error, state}
     end

@@ -12,9 +12,10 @@ defmodule Raw.Application do
       Raw.Repo,
       # Start the endpoint when the application starts
       RawWeb.Endpoint,
-      {Registry, keys: :unique, name: Registry.Game}
+      {Registry, keys: :unique, name: Registry.Game},
       # Starts a worker by calling: Raw.Worker.start_link(arg)
       # {Raw.Worker, arg},
+      Raw.Game.GameSupervisor
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

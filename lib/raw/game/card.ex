@@ -2,7 +2,9 @@ defmodule Raw.Game.Card do
   @moduledoc false
   alias __MODULE__
 
-  alias Raw.Game.{CardCompare, CardRuleSelector}
+  alias Raw.Game.{CardCompare, CardRuleSelector, CardCompare}
+
+  @type t() :: %Card{color: binary, value: integer, display_value: binary}
 
   @colors [:splade, :club, :hearts, :diamond]
   @init_cards_num 17
@@ -34,9 +36,22 @@ defmodule Raw.Game.Card do
 
   def deal_cards(cards) do
     first_group = Enum.take(cards, @init_cards_num)
-    second_group = cards |> Enum.drop(@init_cards_num) |> Enum.take(@init_cards_num)
-    third_group = cards |> Enum.drop(@init_cards_num * 2) |> Enum.take(@init_cards_num)
-    landlord_group = cards |> Enum.drop(@init_cards_num * 3) |> Enum.take(3)
+
+    second_group =
+      cards
+      |> Enum.drop(@init_cards_num)
+      |> Enum.take(@init_cards_num)
+
+    third_group =
+      cards
+      |> Enum.drop(@init_cards_num * 2)
+      |> Enum.take(@init_cards_num)
+
+    landlord_group =
+      cards
+      |> Enum.drop(@init_cards_num * 3)
+      |> Enum.take(3)
+
     [first_group, second_group, third_group, landlord_group]
   end
 
@@ -52,7 +67,20 @@ defmodule Raw.Game.Card do
     end
   end
 
+  def extract_card_value({this, other}) do
+    curr = extract_card_value(this)
+    last = extract_card_value(other)
+    {curr, last}
+  end
+
   def extract_card_value(cards) do
-    cards |> Enum.map(& &1.value)
+    cards
+    |> Enum.map(& &1.value)
+  end
+
+  @spec compare(tuple :: tuple(), atom()) :: {atom(), atom()} | atom()
+  def compare(tuple, card_type) do
+    {curr, last} = extract_card_value(tuple)
+    CardCompare.basic_compare(curr, card_type, last)
   end
 end

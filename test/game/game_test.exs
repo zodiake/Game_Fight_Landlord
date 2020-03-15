@@ -4,14 +4,14 @@ defmodule Raw.Game.GameTest do
   alias Raw.Game.{Game, GameRule}
 
   test "game should empty when init" do
-    Game.start_link(%{guid: 1})
+    Game.start_link(1)
     state = :sys.get_state(Game.via(1))
     assert state.game_id == 1
     assert state.rules.state == :waiting_start
   end
 
   test "test landlord play card two passed and should landlord play" do
-    Game.start_link(%{guid: 1})
+    Game.start_link(1)
     Game.player_join(Game.via(1))
     Game.player_join(Game.via(1))
     Game.player_join(Game.via(1))
@@ -61,8 +61,7 @@ defmodule Raw.Game.GameTest do
     state = :sys.get_state(Game.via(1))
     assert state.last.meta == :single
     first1 = Enum.find(first1_all, fn x -> x.value > hd(first).value end)
-    a = Game.play_round(Game.via(1), player1, [first1])
-    IO.inspect(a)
+    Game.play_round(Game.via(1), player1, [first1])
     Game.pass_round(Game.via(1), player2)
     Game.pass_round(Game.via(1), player0)
 

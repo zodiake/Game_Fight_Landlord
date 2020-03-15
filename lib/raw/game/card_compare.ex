@@ -1,7 +1,8 @@
 defmodule Raw.Game.CardCompare do
   @moduledoc false
-  alias Raw.Game.{CardRule, Helper}
+  alias Raw.Game.{CardRule, Helper, Card}
 
+  @spec compare(curr_cards :: list(integer), atom(), last_cards :: list(integer)) :: {atom(), atom()} | atom()
   def compare(curr_cards, :single, last_cards) do
     if hd(last_cards) < hd(curr_cards) do
       {:ok, :single}
@@ -57,26 +58,19 @@ defmodule Raw.Game.CardCompare do
       {:ok, new_type}
     else
       :error -> :error
-      {:error, msg} -> :error
-    end
-  end
-
-  def basic_compare(cards, type, last) when type == :bomb do
-    compared_res = compare(type, last, cards)
-    expected = {:ok, :bomb, cards}
-
-    if Helper.is_bomb(cards) == {:ok} and compared_res == expected do
-      expected
-    else
-      :error
+      {:error, _msg} -> :error
     end
   end
 
   def basic_compare(cards, type, last) do
-    if Helper.is_bomb(cards) == {:ok, :bomb} do
-      {:ok, :bomb}
-    else
+    if Helper.is_bomb(cards) == :error do
       compare(cards, type, last)
+    else
+      if type == :bomb do
+        compare(cards, :bomb, last)
+      else
+        {:ok, :bomb}
+      end
     end
   end
 end
