@@ -11,7 +11,9 @@ defmodule Raw.MixProject do
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
-      dialyzer: [plt_add_deps: :transitive]
+      dialyzer: [
+        plt_add_deps: :transitive
+      ]
     ]
   end
 
@@ -44,6 +46,8 @@ defmodule Raw.MixProject do
       {:gettext, "~> 0.11"},
       {:jason, "~> 1.0"},
       {:plug_cowboy, "~> 2.0"},
+      {:phoenix_live_view, "~> 0.9.0"},
+      {:floki, ">= 0.0.0", only: :test},
       {:dialyxir, "~> 0.4", only: [:dev]}
     ]
   end

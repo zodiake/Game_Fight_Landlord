@@ -8,7 +8,11 @@ const CopyWebpackPlugin = require('copy-webpack-plugin');
 module.exports = (env, options) => ({
   optimization: {
     minimizer: [
-      new TerserPlugin({ cache: true, parallel: true, sourceMap: false }),
+      new TerserPlugin({
+        cache: true,
+        parallel: true,
+        sourceMap: false
+      }),
       new OptimizeCSSAssetsPlugin({})
     ]
   },
@@ -20,8 +24,7 @@ module.exports = (env, options) => ({
     path: path.resolve(__dirname, '../priv/static/js')
   },
   module: {
-    rules: [
-      {
+    rules: [{
         test: /\.js$/,
         exclude: /node_modules/,
         use: {
@@ -31,11 +34,28 @@ module.exports = (env, options) => ({
       {
         test: /\.css$/,
         use: [MiniCssExtractPlugin.loader, 'css-loader']
+      },
+      {
+        test: /\.elm$/,
+        exclude: ["/elm-stuff/", "/node_modules"],
+        loader: "elm-webpack-loader",
+        options: {
+          debug: true,
+          // NOTE: `warn` option was removed in Elm 0.19.
+          // Re-enable if desired for use in Elm 0.18.
+          // warn: true,
+          cwd: path.resolve(__dirname, "elm")
+        }
       }
     ]
   },
   plugins: [
-    new MiniCssExtractPlugin({ filename: '../css/app.css' }),
-    new CopyWebpackPlugin([{ from: 'static/', to: '../' }])
+    new MiniCssExtractPlugin({
+      filename: '../css/app.css'
+    }),
+    new CopyWebpackPlugin([{
+      from: 'static/',
+      to: '../'
+    }])
   ]
 });

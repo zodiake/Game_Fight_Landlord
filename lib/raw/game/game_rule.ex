@@ -205,7 +205,7 @@ defmodule Raw.Game.GameRule do
 
   def clear_round(rule), do: %GameRule{rule | round_cards: []}
 
-  def add_round(rule, %{player: player, play_or_pass: type} = round) do
+  def add_round(rule, %{player: _player, play_or_pass: _type} = round) do
     %GameRule{rule | round_cards: [round | rule.round_cards]}
   end
 

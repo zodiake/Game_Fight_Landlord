@@ -12,7 +12,6 @@ defmodule Raw.Game.GameSupervisor do
   end
 
   def start_game(guid) do
-    spec = %{id: Game, start: {Game, :start_link, [guid]}}
     spec = {Game, guid}
     DynamicSupervisor.start_child(__MODULE__, spec)
   end

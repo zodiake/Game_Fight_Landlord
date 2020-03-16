@@ -23,6 +23,7 @@ defmodule RawWeb do
 
       import Plug.Conn
       import RawWeb.Gettext
+      import Phoenix.LiveView.Controller
       alias RawWeb.Router.Helpers, as: Routes
     end
   end
@@ -41,6 +42,7 @@ defmodule RawWeb do
 
       import RawWeb.ErrorHelpers
       import RawWeb.Gettext
+      import Phoenix.LiveView.Helpers
       alias RawWeb.Router.Helpers, as: Routes
     end
   end
@@ -50,6 +52,7 @@ defmodule RawWeb do
       use Phoenix.Router
       import Plug.Conn
       import Phoenix.Controller
+      import Phoenix.LiveView.Router
     end
   end
 

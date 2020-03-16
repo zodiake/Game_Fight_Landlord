@@ -16,7 +16,7 @@ config :raw, RawWeb.Endpoint,
   secret_key_base: "pQ6aeDiyZQ4kY63L/iZugH9S1mVstin720Dhmyk+RFQSz4aEXRuDZQ4b2MdthUeE",
   render_errors: [view: RawWeb.ErrorView, accepts: ~w(html json)],
   pubsub: [name: Raw.PubSub, adapter: Phoenix.PubSub.PG2],
-  live_view: [signing_salt: "d4nJGNI4"]
+  live_view: [signing_salt: "o7pANLc7E0z3BrLbQu/qGo3ColsXOcTY"]
 
 # Configures Elixir's Logger
 config :logger, :console,

@@ -10,9 +10,17 @@ defmodule RawWeb.Endpoint do
     signing_salt: "gNR8rIZ2"
   ]
 
-  socket "/socket", RawWeb.UserSocket,
-    websocket: true,
-    longpoll: false
+  socket "/socket",
+         RawWeb.UserSocket,
+         websocket: true,
+         longpoll: false
+
+  socket "/live", Phoenix.LiveView.Socket,
+    websocket: [
+      connect_info: [
+        session: @session_options
+      ]
+    ]
 
   # Serve at "/" the static files from "priv/static" directory.
   #
