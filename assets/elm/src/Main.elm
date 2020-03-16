@@ -2,7 +2,7 @@ module Main exposing (main)
 
 import Browser
 import Card exposing (Card, getCardUnicode, testCards)
-import Html exposing (Html, button, div, li, text, ul)
+import Html exposing (Html, button, div, li, text, ul,section)
 import Html.Attributes exposing (class)
 import Html.Events exposing (onClick)
 import List exposing (map)
@@ -21,12 +21,12 @@ main =
 
 
 type alias Model =
-    { cards : List Card }
+    { inHands : List Card, last : List Card }
 
 
 init : Model
 init =
-    { cards = testCards }
+    { inHands = testCards, last = testCards }
 
 
 
@@ -41,7 +41,7 @@ update : Msg -> Model -> Model
 update msg model =
     case msg of
         SelectCard selected ->
-            { model | cards = updateCards toggleSelected selected model.cards }
+            { model | inHands = updateCards toggleSelected selected model.inHands }
 
 
 toggleSelected : Card -> Card
@@ -75,10 +75,16 @@ cardView card =
     li [ class "card", class selectedClass, onClick (SelectCard card) ] [ text (getCardUnicode card) ]
 
 
-cardsView : Model -> Html Msg
-cardsView model =
-    ul [class "hands"]
-        (List.map cardView model.cards)
+cardsView : List Card -> Html Msg
+cardsView inHands =
+    ul [ class "hands" ]
+        (List.map cardView inHands)
+
+
+poolsView : List Card -> Html Msg
+poolsView last =
+    ul [ class "pools" ]
+        (List.map cardView last)
 
 
 
@@ -87,6 +93,13 @@ cardsView model =
 
 view : Model -> Html Msg
 view model =
-    div []
-        [ cardsView model
+    section []
+        [ div []
+            [ poolsView model.last
+            ]
+        , div []
+            []
+        , div []
+            [ cardsView model.inHands
+            ]
         ]

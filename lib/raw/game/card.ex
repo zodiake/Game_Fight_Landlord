@@ -4,25 +4,24 @@ defmodule Raw.Game.Card do
 
   alias Raw.Game.{CardCompare, CardRuleSelector, CardCompare}
 
-  @type t() :: %Card{color: binary, value: integer, display_value: binary}
+  @type t() :: %Card{color: binary, value: integer}
   @type list_cards() :: list(Card.t())
 
   @colors [:splade, :club, :hearts, :diamond]
   @init_cards_num 17
-  defstruct [:color, :value, :display_value]
+  defstruct [:color, :value]
 
   @spec new() :: list_cards
   def new() do
-    big_joke = %Card{color: :big_joke, value: 16, display_value: "big_joke"}
-    little_joke = %Card{color: :little_joke, value: 17, display_value: "little_joke"}
+    big_joke = %Card{color: :big_joke, value: 14}
+    little_joke = %Card{color: :little_joke, value: 15}
 
     cards =
       for c <- @colors,
-          v <- 3..15 do
+          v <- 0..12 do
         %Card{}
         |> Map.put(:color, c)
         |> Map.put(:value, v)
-        |> Map.put(:display_value, display_value(v))
       end
 
     [big_joke | [little_joke | cards]]
@@ -63,14 +62,6 @@ defmodule Raw.Game.Card do
   @spec sort(list_cards) :: list_cards
   def sort(cards) do
     Enum.sort(cards)
-  end
-
-  defp display_value(value) do
-    if value <= 13 do
-      value
-    else
-      value - 13
-    end
   end
 
   @spec extract_card_value({list_cards, list_cards}) :: {list(String.t()), list(String.t())}
