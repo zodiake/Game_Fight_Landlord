@@ -48,7 +48,8 @@ defmodule Raw.MixProject do
       {:plug_cowboy, "~> 2.0"},
       {:phoenix_live_view, "~> 0.9.0"},
       {:floki, ">= 0.0.0", only: :test},
-      {:dialyxir, "~> 0.4", only: [:dev]}
+      {:dialyxir, "~> 0.4", only: [:dev]},
+      {:credo, "~> 1.2", only: [:dev, :test], runtime: false}
     ]
   end
 

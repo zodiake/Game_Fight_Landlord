@@ -8,6 +8,7 @@ defmodule RawWeb.Router do
     plug :fetch_live_flash
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+    plug :put_live_layout, {RawWeb.LayoutView, :app}
   end
 
   pipeline :api do
@@ -23,6 +24,8 @@ defmodule RawWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :index
+    get "/account", AccountController,:index
+    post "/account", AccountController, :create
     live "/game", GameLive
   end
 

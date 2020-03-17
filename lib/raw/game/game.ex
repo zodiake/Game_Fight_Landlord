@@ -13,10 +13,10 @@ defmodule Raw.Game.Game do
   def player_get_ready(game, player), do: GenServer.call(game, {:get_ready, player})
 
   def pass_landlord(game, player),
-    do: GenServer.call(game, {:pass_landlord, player})
+      do: GenServer.call(game, {:pass_landlord, player})
 
   def accept_landlord(game, player),
-    do: GenServer.call(game, {:accept_landlord, player})
+      do: GenServer.call(game, {:accept_landlord, player})
 
   def play_round(game, player, cards), do: GenServer.call(game, {:play, player, cards})
 
@@ -33,19 +33,22 @@ defmodule Raw.Game.Game do
   end
 
   def handle_call({:get_ready, player}, _from, state) do
-    with {:ok, rules} <- GameRule.check(state.rules, {:get_ready, player}) do
-      if rules.state == :deal_cards do
-        state
-        |> deal_cards(rules)
-        |> deal_finished()
-        |> reply_success()
-      else
-        state
-        |> update_rules(rules)
-        |> reply_success(:ok)
-      end
-    else
-      :error -> {:reply, :error, state}
+    case GameRule.check(state.rules, {:get_ready, player}) do
+      {:ok, rules} ->
+        if rules.state == :deal_cards do
+          state
+          |> deal_cards(rules)
+          |> deal_finished()
+          |> reply_success()
+
+        else
+          state
+          |> update_rules(rules)
+          |> reply_success(:ok)
+        end
+
+      _ ->
+        {:reply, :error, state}
     end
   end
 
@@ -63,6 +66,7 @@ defmodule Raw.Game.Game do
     with {:ok, rules} <- GameRule.check(state.rules, {:accept_landlord, player}) do
       state
       |> update_rules(rules)
+      |> add_hands(player, state.landlord_cards.hands)
       |> reply_success()
     end
   end
@@ -102,12 +106,13 @@ defmodule Raw.Game.Game do
   end
 
   def handle_call({:pass, player}, _from, state) do
-    with {:ok, rules, :round_finish} <- GameRule.check(state.rules, {:pass, player}) do
-      state
-      |> update_rules(rules)
-      |> clear_last()
-      |> reply_success(rules.state)
-    else
+    case GameRule.check(state.rules, {:pass, player}) do
+      {:ok, rules, :round_finish} ->
+        state
+        |> update_rules(rules)
+        |> clear_last()
+        |> reply_success(rules.state)
+
       {:ok, rules} ->
         state
         |> update_rules(rules)
@@ -152,8 +157,10 @@ defmodule Raw.Game.Game do
 
   def reply_success(state), do: {:reply, state, state}
 
-  def update_hands(state, player, cards),
-    do: put_in(state, [player, :hands], Enum.sort_by(cards, fn x -> x.value end))
+  def sort_hands(state, player) do
+    cards = get_in(state, [player, :hands])
+    put_in(state, [player, :hands], Enum.sort_by(cards, fn x -> x.value end))
+  end
 
   def deal_cards(state, rules) do
     [f, s, t, l] =
@@ -162,10 +169,10 @@ defmodule Raw.Game.Game do
       |> Card.deal_cards()
 
     state
-    |> update_hands(:player0, f)
-    |> update_hands(:player1, s)
-    |> update_hands(:player2, t)
-    |> update_hands(:landlord_cards, l)
+    |> add_hands(:player0, f)
+    |> add_hands(:player1, s)
+    |> add_hands(:player2, t)
+    |> add_hands(:landlord_cards, l)
     |> update_rules(rules)
   end
 
@@ -186,6 +193,15 @@ defmodule Raw.Game.Game do
   def remove_hands(state, player, cards) do
     new_hands = Enum.filter(get_in(state, [player, :hands]), fn x -> !Enum.member?(cards, x) end)
     put_in(state, [player, :hands], new_hands)
+  end
+
+  def add_hands(state, player, cards) do
+    if state[player][:hands] == nil do
+      put_in(state, [player, :hands], cards)
+    else
+      put_in(state, [player, :hands], state[player][:hands] ++ cards)
+    end
+    |> sort_hands(player)
   end
 
   def clear_last(state) do

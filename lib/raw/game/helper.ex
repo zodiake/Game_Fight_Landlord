@@ -84,7 +84,7 @@ defmodule Raw.Game.Helper do
 
     with true <- diff_one(three_keys),
          :ok <- three_other_keys_can_pair(three_keys, left_keys, left_values) do
-      if length(left_keys) == 0 do
+      if left_keys == [] do
         {:ok, {:full_house, length(three_keys), 0}}
       else
         {:ok, {:full_house, length(three_keys), div(length(left_values), length(three_keys))}}
@@ -97,7 +97,7 @@ defmodule Raw.Game.Helper do
 
   defp three_other_keys_can_pair(three_keys, other_keys, other_values) do
     # attach card or do not attach card or attach card number is equal to three group count
-    if length(three_keys) == length(other_keys) || length(other_keys) == 0 ||
+    if length(three_keys) == length(other_keys) || other_keys == [] ||
          length(other_values) == length(three_keys) do
       :ok
     else

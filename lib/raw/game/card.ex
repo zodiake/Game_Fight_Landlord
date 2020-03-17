@@ -3,6 +3,15 @@ defmodule Raw.Game.Card do
   alias __MODULE__
 
   alias Raw.Game.{CardCompare, CardRuleSelector, CardCompare}
+  @spades ["🂣", "🂤", "🂥", "🂦", "🂧", "🂨", "🂩", "🂪", "🂫", "🂭", "🂮", "🂡", "🂢"]
+
+  @hearts ["🂳", "🂴", "🂵", "🂶", "🂷", "🂸", "🂹", "🂺", "🂻", "🂽", "🂾", "🂱", "🂲"]
+
+  @diamonds ["🃃", "🃄", "🃅", "🃆", "🃇", "🃈", "🃉", "🃊", "🃋", "🃍", "🃎", "🃁", "🃂"]
+
+  @clubs ["🃓", "🃔", "🃕", "🃖", "🃗", "🃘", "🃙", "🃚", "🃛", "🃝", "🃞", "🃑", "🃒"]
+
+  @jokers ["🃏", "🃟"]
 
   @type t() :: %Card{color: binary, value: integer}
   @type list_cards() :: list(Card.t())
@@ -27,7 +36,7 @@ defmodule Raw.Game.Card do
     [big_joke | [little_joke | cards]]
   end
 
-  @spec cart_type(list_cards) :: String.t
+  @spec cart_type(list_cards) :: String.t()
   def cart_type(cards) do
     CardRuleSelector.select_type(cards)
   end

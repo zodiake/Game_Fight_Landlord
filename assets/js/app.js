@@ -14,7 +14,17 @@ import "phoenix_html"
 // Import local files
 //
 // Local files can be imported directly using relative paths, for example:
+/*
+* omit elm
 import { Elm } from "../elm/src/Main.elm"
 
 const elmDiv = document.getElementById("elm-main")
 Elm.Main.init({ node: elmDiv })
+*/
+
+import {Socket} from "phoenix"
+import LiveSocket from "phoenix_live_view"
+
+let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
+let liveSocket = new LiveSocket("/live", Socket, {params: {_csrf_token: csrfToken}})
+liveSocket.connect()

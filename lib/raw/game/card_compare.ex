@@ -55,7 +55,7 @@ defmodule Raw.Game.CardCompare do
   end
 
   @spec basic_compare(Card.list_cards, atom, Card.list_cards) :: {:ok, atom} | :error
-  def basic_compare(current, type, last) when length(last) == 0 do
+  def basic_compare(current, type, last) when last == [] do
     with {:ok, new_type} <- CardRule.check(current, type) do
       {:ok, new_type}
     else

@@ -1,4 +1,4 @@
-module Card exposing (Card, getCardUnicode,testCards)
+module Card exposing (Card, getCardUnicode, testCards)
 
 import Array exposing (Array, fromList, get)
 import List
@@ -25,17 +25,15 @@ clubs =
     fromList [ "🃓", "🃔", "🃕", "🃖", "🃗", "🃘", "🃙", "🃚", "🃛", "🃝", "🃞", "🃑", "🃒" ]
 
 
-type CardColor
-    = Spade
-    | Heart
-    | Diamond
-    | Club
+jokers : Array String
+jokers =
+    fromList [ "🃏", "🃟" ]
 
 
 type alias Card =
-    { color : CardColor
+    { color : String
     , value : Int
-    , selected: Bool
+    , selected : Bool
     }
 
 
@@ -44,17 +42,26 @@ getCardUnicode card =
     let
         res =
             case card.color of
-                Diamond ->
+                "Diamond" ->
                     get card.value diamonds
 
-                Club ->
+                "Club" ->
                     get card.value clubs
 
-                Heart ->
+                "Heart" ->
                     get card.value hearts
 
-                Spade ->
+                "Spade" ->
                     get card.value spades
+
+                "RedJoker" ->
+                    get 0 jokers
+
+                "WhiteJoker" ->
+                    get 1 jokers
+
+                _ ->
+                    Just ""
     in
     case res of
         Just a ->
@@ -66,7 +73,7 @@ getCardUnicode card =
 
 testCards : List Card
 testCards =
-    [ Card Spade 1 False, Card Club 1 False, Card Heart 1 False, Card Diamond 1 False ]
+    [ Card "Spade" 1 False, Card "Club" 1 False, Card "Heart" 1 False, Card "Diamond" 1 False ]
 
 
 getCardsUnicode : List Card -> List String

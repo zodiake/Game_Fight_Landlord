@@ -31,6 +31,7 @@ defmodule Raw.Game.GameTest do
 
     s = Game.accept_landlord(Game.via(1), player0)
     assert s.rules.state == String.to_atom(to_string(player0) <> "_turn")
+    assert length(get_in(s,[player0,:hands])) == 20
 
     # first play all pass
     first = [hd(s[player0][:hands])]
@@ -48,7 +49,7 @@ defmodule Raw.Game.GameTest do
     assert state.rules.round_cards == []
     assert state.last.card == nil
     assert state.last.meta == nil
-    assert length(state[player0][:hands]) == 16
+    assert length(state[player0][:hands]) == 19
     assert length(state[player1][:hands]) == 17
     assert length(state[player2][:hands]) == 17
     assert state.rules.state == player0_turn
@@ -67,7 +68,7 @@ defmodule Raw.Game.GameTest do
 
     state = :sys.get_state(Game.via(1))
     assert state.rules.round_cards == []
-    assert length(state[player0][:hands]) == 15
+    assert length(state[player0][:hands]) == 18
     assert length(state[player1][:hands]) == 16
     assert length(state[player2][:hands]) == 17
 

@@ -11,7 +11,7 @@ defmodule Raw.Game.GameRuleTest do
          {:ok, _, rules3} <- GameRule.check(rules2, :add_player) do
       rules3
     else
-      :error -> IO.inspect(:error)
+      :error -> :error
     end
   end
 

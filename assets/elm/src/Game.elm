@@ -1,4 +1,4 @@
-module Main exposing (main)
+module Game exposing (..)
 
 import Browser
 import Card exposing (Card, getCardUnicode, testCards)

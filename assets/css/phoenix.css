@@ -780,6 +780,14 @@ ul.hands {
   font-size: 10em;
 }
 
+li.red-card {
+  color: red
+}
+
+li.black-card {
+  color: black
+}
+
 li.card.card-selected {
   margin-top: -0.2em;
 }
