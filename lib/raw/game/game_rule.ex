@@ -144,11 +144,6 @@ defmodule Raw.Game.GameRule do
     rules.player1 == :get_ready && rules.player2 == :get_ready && rules.player0 == :get_ready
   end
 
-  def all_players_joined(rules) do
-    rules.player1 == :joined_room && rules.player2 == :joined_room &&
-      rules.player0 == :joined_room
-  end
-
   def random_landlord(), do: Enum.random([:player0, :player1, :player2])
 
   def update_give_up(rule, player) do
@@ -191,11 +186,6 @@ defmodule Raw.Game.GameRule do
 
   def add_round(rule, %{player: _player, play_or_pass: _type} = round) do
     %GameRule{rule | round_cards: [round | rule.round_cards]}
-  end
-
-  def next_player(rule, :passed, player) do
-    if rule.round_cards == [] do
-    end
   end
 
   def next_player(player) do

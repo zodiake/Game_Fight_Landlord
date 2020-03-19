@@ -1,4 +1,4 @@
-defmodule Raw.Game.Game do
+defmodule Raw.Game.GameEngine do
   use GenServer
   alias Raw.Game.{Card, GameRule, CardRuleSelector, CardCompare}
 
