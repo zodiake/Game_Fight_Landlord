@@ -107,7 +107,7 @@ defmodule Raw.Game.Game do
 
   def handle_call({:pass, player}, _from, state) do
     case GameRule.check(state.rules, {:pass, player}) do
-      {:ok, rules, :round_finish} ->
+      {:ok, rules, :round_over} ->
         state
         |> update_rules(rules)
         |> clear_last()
