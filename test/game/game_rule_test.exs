@@ -38,18 +38,18 @@ defmodule Raw.Game.GameRuleTest do
       |> elem(1)
 
     assert rules.rule_state == :landlord_electing
-    assert rules.source_landlord != nil
-    assert rules.landlord == nil
+    assert rules.landlord != nil
 
     {:ok, _, nr} =
       rules
-      |> GameRule.check({:pass_landlord, rules.source_landlord})
+      |> GameRule.check({:pass_landlord, rules.landlord})
 
-    assert nr.give_up == [rules.source_landlord]
+    assert nr.give_up == 1
     assert nr.rule_state == :landlord_electing
-    landlord = GameRule.next_player(rules.source_landlord)
+    landlord = GameRule.next_player(rules.landlord)
     {:ok, nnr} = nr
                  |> GameRule.check({:accept_landlord, landlord})
-    assert nnr.rule_state == String.to_atom(to_string(landlord) <> "_turn")
+    assert nnr.rule_state == :game_start
+    assert nnr.round.turn == String.to_atom(to_string(landlord) <> "_turn")
   end
 end

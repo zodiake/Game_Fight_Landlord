@@ -38,23 +38,16 @@ defmodule Raw.Game.GameEngine do
     |> maybe_ready()
   end
 
-  def handle_call({:pass_landlord, player}, _from, state) do
-    with {:ok, next_one, rules} <- GameRule.check(state.rules, {:pass_landlord, player}) do
-      state
-      |> update_rules(rules)
-      |> reply_success(next_one)
-    else
-      :error -> {:reply, :error, state}
-    end
+  def handle_call({:accept_landlord, player}, _from, state) do
+    state
+    |> GameState.accept_landlord(player)
+    |> maybe_accept()
   end
 
-  def handle_call({:accept_landlord, player}, _from, state) do
-    with {:ok, rules} <- GameRule.check(state.rules, {:accept_landlord, player}) do
-      state
-      |> update_rules(rules)
-      |> add_hands(player, state.landlord_cards.hands)
-      |> reply_success()
-    end
+  def handle_call({:pass_landlord, player}, _from, state) do
+    state
+    |> GameState.pass_landlord(player)
+    |> maybe_pass()
   end
 
   def handle_call({:play, player, cards}, _from, state) do
@@ -118,11 +111,11 @@ defmodule Raw.Game.GameEngine do
       {
         :reply,
         [
+          player0: state.player0.hands,
           player1: state.player1.hands,
           player2: state.player2.hands,
-          player3: state.player3.hands,
-          landlord: state.rule.source_landlord,
-          landlord_cards: state.landlord.hands
+          landlord: state.rule.landlord,
+          extra_cards: state.extra_cards
         ],
         state
       }
@@ -132,6 +125,14 @@ defmodule Raw.Game.GameEngine do
   end
 
   defp maybe_ready({:error, state}), do: {:reply, :error, state}
+
+  defp maybe_accept({:error, state}), do: {:reply, :error, state}
+
+  defp maybe_accept({:ok, state}), do: {:reply, state.rule.round.turn, state}
+
+  defp maybe_pass({:error, state}), do: {:reply, :error, state}
+
+  defp maybe_pass({:ok, player, state}), do: {:reply, player, state}
 
   def update_rules(state, rules) do
     %{state | rules: rules}

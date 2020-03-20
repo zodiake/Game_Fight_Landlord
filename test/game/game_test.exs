@@ -29,12 +29,43 @@ defmodule Raw.Game.GameTest do
     pid = GameEngine.via(1)
     assert GameEngine.player_get_ready(pid, p1) == :ok
     assert GameEngine.player_get_ready(pid, p2) == :ok
-    [player1: h1, player2: h2, player3: h3, landlord: h4, landlord_cards: h5] = GameEngine.player_get_ready(pid, p3)
+
+    [player0: h1, player1: h2, player2: h3, landlord: h4, extra_cards: h5] =
+      GameEngine.player_get_ready(pid, p3)
 
     assert length(h1) == 17
     assert length(h2) == 17
     assert length(h3) == 17
     assert length(h5) == 3
+  end
+
+  test "accept landlord" do
+    [p1, p2, p3] = all_joined_room(1)
+    pid = GameEngine.via(1)
+    assert GameEngine.player_get_ready(pid, p1) == :ok
+    assert GameEngine.player_get_ready(pid, p2) == :ok
+
+    [player0: h1, player1: h2, player2: h3, landlord: h4, extra_cards: h5] =
+      GameEngine.player_get_ready(pid, p3)
+
+    assert GameEngine.accept_landlord(pid, h4) ==
+             String.to_existing_atom(to_string(h4) <> "_turn")
+  end
+
+  test "pass landlord" do
+    [p1, p2, p3] = all_joined_room(1)
+    pid = GameEngine.via(1)
+    assert GameEngine.player_get_ready(pid, p1) == :ok
+    assert GameEngine.player_get_ready(pid, p2) == :ok
+
+    [player0: h1, player1: h2, player2: h3, landlord: h4, extra_cards: h5] =
+      GameEngine.player_get_ready(pid, p3)
+
+    np = GameEngine.pass_landlord(pid, h4)
+    assert np != :error
+
+    assert GameEngine.accept_landlord(pid, np) ==
+             String.to_existing_atom(to_string(GameRule.next_player(h4)) <> "_turn")
   end
 
   defp all_joined_room(id) do

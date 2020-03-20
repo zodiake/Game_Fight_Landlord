@@ -11,7 +11,7 @@ defmodule Raw.Game.Card do
 
   @clubs ["🃓", "🃔", "🃕", "🃖", "🃗", "🃘", "🃙", "🃚", "🃛", "🃝", "🃞", "🃑", "🃒"]
 
-  @type t() :: %Card{color: binary, value: integer, display: string}
+  @type t() :: %Card{color: binary, value: integer, display: String.t()}
   @type list_cards() :: list(Card.t())
 
   @colors [:spade, :club, :heart, :diamond]
@@ -108,7 +108,6 @@ defmodule Raw.Game.Card do
 
   def update_class(card, %{"v" => value, "color" => color}) do
     if to_string(card.value) == value and card.color == String.to_atom(color) do
-      IO.inspect(card)
       toggle_selected(card)
     else
       card

@@ -1,16 +1,17 @@
 defmodule Raw.Game.GameRule do
   alias __MODULE__
+  alias Raw.Game.Round
   @moduledoc false
   @max_entered 3
   defstruct rule_state: :waiting_start,
+            round: %Round{},
             absent: 3,
             player0: :not_set,
             player1: :not_set,
             player2: :not_set,
-            source_landlord: nil,
-            round_cards: [],
-            give_up: [],
-            landlord: nil
+            extra_cards: [],
+            landlord: nil,
+            give_up: 0
 
   def new(), do: %GameRule{}
 
@@ -20,12 +21,10 @@ defmodule Raw.Game.GameRule do
     if absent > 0 do
       player = String.to_atom("player" <> to_string(rem(absent, 3)))
 
-      rules =
-        game_rule
-        |> Map.put(player, :joined_room)
-        |> Map.put(:absent, absent - 1)
-
-      {:ok, player, rules}
+      game_rule
+      |> Map.put(player, :joined_room)
+      |> Map.put(:absent, absent - 1)
+      |> reply_success(player)
     else
       :error
     end
@@ -39,9 +38,14 @@ defmodule Raw.Game.GameRule do
           |> Map.put(player, :get_ready)
 
         if all_players_get_ready(rules) do
-          {:ok, %{rules | rule_state: :landlord_electing, source_landlord: random_landlord()}}
+          rules
+          |> Map.put(player, :get_ready)
+          |> update_landlord(random_landlord())
+          |> update_state(:landlord_electing)
+          |> reply_success
         else
-          {:ok, rules}
+          rules
+          |> reply_success
         end
 
       :get_ready ->
@@ -50,67 +54,37 @@ defmodule Raw.Game.GameRule do
   end
 
   def check(%GameRule{rule_state: :landlord_electing} = game_rule, {:pass_landlord, player}) do
-    if player_can_participate_electing(player, game_rule) do
+    if game_rule.landlord == player and game_rule.give_up < 3 do
       new_rule =
         game_rule
-        |> update_give_up(player)
+        |> update_give_up()
+        |> update_landlord(next_player(player))
 
-      {:ok, next_player(player), new_rule}
+      {:ok, new_rule.landlord, new_rule}
     else
-      :error
+      if game_rule.give_up == 3 do
+        {:ok, %GameRule{}}
+      else
+        :error
+      end
     end
   end
 
   def check(%GameRule{rule_state: :landlord_electing} = game_rule, {:accept_landlord, player}) do
-    if player_can_participate_electing(player, game_rule) do
-      new_rule =
-        game_rule
-        |> update_turn(player)
-
-      {:ok, %GameRule{new_rule | landlord: player}}
+    if game_rule.landlord == player do
+      game_rule
+      |> update_state(:game_start)
+      |> update_round(player)
+      |> reply_success
     else
       :error
     end
   end
 
   def check(%GameRule{rule_state: turn} = game_rule, {:play, player}) do
-    if turn != String.to_atom(to_string(player) <> "_turn") do
-      :error
-    else
-      new_rule =
-        game_rule
-        |> add_round(%{player: player, play_or_pass: :play})
-        |> update_turn(next_player(player))
-
-      {:ok, new_rule}
-    end
   end
 
   def check(%GameRule{rule_state: player_turn} = game_rule, {:pass, player}) do
-    if game_rule.round_cards == [] do
-      :error
-    else
-      last = hd(game_rule.round_cards)
-
-      if last.play_or_pass == :pass do
-        next_player =
-          Enum.filter([:player0, :player1, :player2], &(&1 != last.player and &1 != player))
-
-        new_rule =
-          game_rule
-          |> update_turn(hd(next_player))
-          |> clear_round()
-
-        {:ok, new_rule, :round_over}
-      else
-        new_rule =
-          game_rule
-          |> add_round(%{player: player, play_or_pass: :pass})
-          |> update_turn(next_player(player))
-
-        {:ok, new_rule}
-      end
-    end
   end
 
   def check(%GameRule{rule_state: :player0_turn} = game_rule, {:win_check, win_or_not}) do
@@ -142,47 +116,33 @@ defmodule Raw.Game.GameRule do
 
   def random_landlord(), do: Enum.random([:player0, :player1, :player2])
 
-  def update_give_up(rule, player) do
-    if rule.give_up == [] do
-      %GameRule{rule | give_up: [player]}
-    else
-      %GameRule{rule | give_up: [player | rule.give_up]}
-    end
+  def update_give_up(rule) do
+    %GameRule{rule | give_up: rule.give_up + 1}
   end
 
   def update_state(rule, state), do: %GameRule{rule | rule_state: state}
 
-  def player_can_participate_electing(player, rule) do
+  def player_can_participate_electing(rule, player) do
     case rule.landlord do
       nil ->
-        containers = Enum.member?(rule.give_up, player)
-
-        if containers == false do
-          true
-        else
-          false
-        end
+        not Enum.member?(rule.give_up, player)
 
       _ ->
         false
     end
   end
 
-  def update_turn(rule, player) when is_binary(player) do
-    state = String.to_atom(player <> "_turn")
-    update_state(rule, state)
+  def update_round(rule, player) do
+    turn = String.to_existing_atom(to_string(player) <> "_turn")
+    round = %Round{rule.round | turn: turn}
+    %GameRule{rule | round: round}
   end
 
-  def update_turn(rule, player) when is_atom(player) do
-    state = String.to_atom(to_string(player) <> "_turn")
-    update_state(rule, state)
-  end
+  def update_landlord(rule, player), do: %__MODULE__{rule | landlord: player}
 
-  def clear_round(rule), do: %GameRule{rule | round_cards: []}
+  def reply_success(rule), do: {:ok, rule}
 
-  def add_round(rule, %{player: _player, play_or_pass: _type} = round) do
-    %GameRule{rule | round_cards: [round | rule.round_cards]}
-  end
+  def reply_success(rule, res), do: {:ok, res, rule}
 
   def next_player(player) do
     case player do
