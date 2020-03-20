@@ -1,9 +1,13 @@
 defmodule Raw.Game.GameEngine do
   use GenServer
-  alias Raw.Game.{Card, GameRule, CardRuleSelector, CardCompare}
+  alias Raw.Game.{Card, GameRule, CardRuleSelector, CardCompare, GameState}
 
   def start_link(guid) do
     GenServer.start_link(__MODULE__, guid, name: via(guid))
+  end
+
+  def init(params) do
+    {:ok, GameState.new(params)}
   end
 
   def via(name), do: {:via, Registry, {Registry.Game, name}}
@@ -23,33 +27,15 @@ defmodule Raw.Game.GameEngine do
   def pass_round(game, player), do: GenServer.call(game, {:pass, player})
 
   def handle_call(:add_player, _from, state) do
-    with {:ok, player, rules} <- GameRule.check(state.rules, :add_player) do
-      state
-      |> update_rules(rules)
-      |> reply_success(player)
-    else
-      :error -> {:reply, :error, state}
-    end
+    state
+    |> GameState.player_joined()
+    |> maybe_join()
   end
 
   def handle_call({:get_ready, player}, _from, state) do
-    case GameRule.check(state.rules, {:get_ready, player}) do
-      {:ok, rules} ->
-        if rules.state == :deal_cards do
-          state
-          |> deal_cards(rules)
-          |> deal_finished()
-          |> reply_success()
-
-        else
-          state
-          |> update_rules(rules)
-          |> reply_success(:ok)
-        end
-
-      _ ->
-        {:reply, :error, state}
-    end
+    state
+    |> GameState.player_ready(player)
+    |> maybe_ready()
   end
 
   def handle_call({:pass_landlord, player}, _from, state) do
@@ -123,31 +109,29 @@ defmodule Raw.Game.GameEngine do
     end
   end
 
-  def init(params) do
-    {:ok, fresh_state(params)}
+  defp maybe_join({:ok, player, state}), do: {:reply, player, state}
+
+  defp maybe_join({:error, state}), do: {:reply, :error, state}
+
+  defp maybe_ready({:ok, state}) do
+    if state.rule.rule_state == :landlord_electing do
+      {
+        :reply,
+        [
+          player1: state.player1.hands,
+          player2: state.player2.hands,
+          player3: state.player3.hands,
+          landlord: state.rule.source_landlord,
+          landlord_cards: state.landlord.hands
+        ],
+        state
+      }
+    else
+      {:reply, :ok, state}
+    end
   end
 
-  def fresh_state(guid) do
-    player1 = %{name: nil, hands: nil, pools: nil}
-    player2 = %{name: nil, hands: nil, pools: nil}
-    player0 = %{name: nil, hands: nil, pools: nil}
-    landlord_cards = %{hands: nil}
-
-    rule = GameRule.new()
-
-    %{
-      player0: player0,
-      player1: player1,
-      player2: player2,
-      landlord_cards: landlord_cards,
-      last: %{
-        card: nil,
-        meta: nil
-      },
-      rules: rule,
-      game_id: guid
-    }
-  end
+  defp maybe_ready({:error, state}), do: {:reply, :error, state}
 
   def update_rules(state, rules) do
     %{state | rules: rules}

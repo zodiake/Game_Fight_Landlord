@@ -18,7 +18,7 @@ defmodule Raw.Game.GameRuleTest do
   test "game rule should deal cards when all join" do
     rules = GameRuleTest.after_join()
 
-    assert rules.state == :waiting_start
+    assert rules.rule_state == :waiting_start
 
     assert rules.player0 == :joined_room
     assert rules.player2 == :joined_room
@@ -37,28 +37,19 @@ defmodule Raw.Game.GameRuleTest do
       |> GameRule.check({:get_ready, :player2})
       |> elem(1)
 
-    assert rules.state == :deal_cards
-    assert rules.source_landlord == nil
-    assert rules.landlord == nil
-
-    rules =
-      rules
-      |> GameRule.check(:deal_finished)
-      |> elem(1)
-
+    assert rules.rule_state == :landlord_electing
     assert rules.source_landlord != nil
     assert rules.landlord == nil
-    assert rules.state == :landlord_electing
 
     {:ok, _, nr} =
       rules
       |> GameRule.check({:pass_landlord, rules.source_landlord})
 
     assert nr.give_up == [rules.source_landlord]
-    assert nr.state == :landlord_electing
+    assert nr.rule_state == :landlord_electing
     landlord = GameRule.next_player(rules.source_landlord)
     {:ok, nnr} = nr
                  |> GameRule.check({:accept_landlord, landlord})
-    assert nnr.state == String.to_atom(to_string(landlord) <> "_turn")
+    assert nnr.rule_state == String.to_atom(to_string(landlord) <> "_turn")
   end
 end

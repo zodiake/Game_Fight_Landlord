@@ -2,7 +2,7 @@ defmodule Raw.Game.GameRule do
   alias __MODULE__
   @moduledoc false
   @max_entered 3
-  defstruct state: :waiting_start,
+  defstruct rule_state: :waiting_start,
             absent: 3,
             player0: :not_set,
             player1: :not_set,
@@ -14,7 +14,7 @@ defmodule Raw.Game.GameRule do
 
   def new(), do: %GameRule{}
 
-  def check(%GameRule{state: :waiting_start} = game_rule, :add_player) do
+  def check(%GameRule{rule_state: :waiting_start} = game_rule, :add_player) do
     absent = game_rule.absent
 
     if absent > 0 do
@@ -31,7 +31,7 @@ defmodule Raw.Game.GameRule do
     end
   end
 
-  def check(%GameRule{state: :waiting_start} = game_rule, {:get_ready, player}) do
+  def check(%GameRule{rule_state: :waiting_start} = game_rule, {:get_ready, player}) do
     case Map.fetch!(game_rule, player) do
       :joined_room ->
         rules =
@@ -39,7 +39,7 @@ defmodule Raw.Game.GameRule do
           |> Map.put(player, :get_ready)
 
         if all_players_get_ready(rules) do
-          {:ok, update_state(rules, :deal_cards)}
+          {:ok, %{rules | rule_state: :landlord_electing, source_landlord: random_landlord()}}
         else
           {:ok, rules}
         end
@@ -49,11 +49,7 @@ defmodule Raw.Game.GameRule do
     end
   end
 
-  def check(%GameRule{state: :deal_cards} = game_rule, :deal_finished) do
-    {:ok, %{game_rule | state: :landlord_electing, source_landlord: random_landlord()}}
-  end
-
-  def check(%GameRule{state: :landlord_electing} = game_rule, {:pass_landlord, player}) do
+  def check(%GameRule{rule_state: :landlord_electing} = game_rule, {:pass_landlord, player}) do
     if player_can_participate_electing(player, game_rule) do
       new_rule =
         game_rule
@@ -65,7 +61,7 @@ defmodule Raw.Game.GameRule do
     end
   end
 
-  def check(%GameRule{state: :landlord_electing} = game_rule, {:accept_landlord, player}) do
+  def check(%GameRule{rule_state: :landlord_electing} = game_rule, {:accept_landlord, player}) do
     if player_can_participate_electing(player, game_rule) do
       new_rule =
         game_rule
@@ -77,7 +73,7 @@ defmodule Raw.Game.GameRule do
     end
   end
 
-  def check(%GameRule{state: turn} = game_rule, {:play, player}) do
+  def check(%GameRule{rule_state: turn} = game_rule, {:play, player}) do
     if turn != String.to_atom(to_string(player) <> "_turn") do
       :error
     else
@@ -90,7 +86,7 @@ defmodule Raw.Game.GameRule do
     end
   end
 
-  def check(%GameRule{state: player_turn} = game_rule, {:pass, player}) do
+  def check(%GameRule{rule_state: player_turn} = game_rule, {:pass, player}) do
     if game_rule.round_cards == [] do
       :error
     else
@@ -117,23 +113,23 @@ defmodule Raw.Game.GameRule do
     end
   end
 
-  def check(%GameRule{state: :player0_turn} = game_rule, {:win_check, win_or_not}) do
+  def check(%GameRule{rule_state: :player0_turn} = game_rule, {:win_check, win_or_not}) do
     case win_or_not do
-      :win -> %GameRule{game_rule | state: :game_over}
+      :win -> %GameRule{game_rule | rule_state: :game_over}
       :not_win -> {:ok, game_rule}
     end
   end
 
-  def check(%GameRule{state: :player1_turn} = game_rule, {:win_check, win_or_not}) do
+  def check(%GameRule{rule_state: :player1_turn} = game_rule, {:win_check, win_or_not}) do
     case win_or_not do
-      :win -> %GameRule{game_rule | state: :game_over}
+      :win -> %GameRule{game_rule | rule_state: :game_over}
       :not_win -> {:ok, game_rule}
     end
   end
 
-  def check(%GameRule{state: :player2_turn} = game_rule, {:win_check, win_or_not}) do
+  def check(%GameRule{rule_state: :player2_turn} = game_rule, {:win_check, win_or_not}) do
     case win_or_not do
-      :win -> %GameRule{game_rule | state: :game_over}
+      :win -> %GameRule{game_rule | rule_state: :game_over}
       :not_win -> {:ok, game_rule}
     end
   end
@@ -154,7 +150,7 @@ defmodule Raw.Game.GameRule do
     end
   end
 
-  def update_state(rule, state), do: %GameRule{rule | state: state}
+  def update_state(rule, state), do: %GameRule{rule | rule_state: state}
 
   def player_can_participate_electing(player, rule) do
     case rule.landlord do

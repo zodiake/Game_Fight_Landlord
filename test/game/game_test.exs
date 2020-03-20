@@ -6,72 +6,44 @@ defmodule Raw.Game.GameTest do
   test "game should empty when init" do
     GameEngine.start_link(1)
     state = :sys.get_state(GameEngine.via(1))
-    assert state.game_id == 1
-    assert state.rules.state == :waiting_start
+    assert state.id == 1
+    assert state.rule.rule_state == :waiting_start
   end
 
   test "test landlord play card two passed and should landlord play" do
-    GameEngine.start_link(1)
-    GameEngine.player_join(GameEngine.via(1))
-    GameEngine.player_join(GameEngine.via(1))
-    GameEngine.player_join(GameEngine.via(1))
-    assert GameEngine.player_join(GameEngine.via(1)) == :error
-    state = :sys.get_state(GameEngine.via(1))
-    assert state.rules.player0 == :joined_room
+    [p1, p2, p3] = all_joined_room(1)
+    pid = GameEngine.via(1)
+    player3 = GameEngine.player_join(pid)
+    assert player3 == :error
+  end
 
-    assert GameEngine.player_get_ready(GameEngine.via(1), :player0) == :ok
-    assert GameEngine.player_get_ready(GameEngine.via(1), :player1) == :ok
-    state = GameEngine.player_get_ready(GameEngine.via(1), :player2)
-    assert state.rules.player0 == :get_ready
-    assert state.rules.player1 == :get_ready
-    assert state.rules.player2 == :get_ready
-    assert state.rules.state == :landlord_electing
+  test "test can not get_ready twice" do
+    [p1, p2, p3] = all_joined_room(1)
+    pid = GameEngine.via(1)
+    assert GameEngine.player_get_ready(pid, p1) == :ok
+    assert GameEngine.player_get_ready(pid, p1) == :error
+  end
 
-    player0 = GameEngine.pass_landlord(GameEngine.via(1), state.rules.source_landlord)
+  test "when all ready" do
+    [p1, p2, p3] = all_joined_room(1)
+    pid = GameEngine.via(1)
+    assert GameEngine.player_get_ready(pid, p1) == :ok
+    assert GameEngine.player_get_ready(pid, p2) == :ok
+    [player1: h1, player2: h2, player3: h3, landlord: h4, landlord_cards: h5] = GameEngine.player_get_ready(pid, p3)
 
-    s = GameEngine.accept_landlord(GameEngine.via(1), player0)
-    assert s.rules.state == String.to_atom(to_string(player0) <> "_turn")
-    assert length(get_in(s,[player0,:hands])) == 20
+    assert length(h1) == 17
+    assert length(h2) == 17
+    assert length(h3) == 17
+    assert length(h5) == 3
+  end
 
-    # first play all pass
-    first = [hd(s[player0][:hands])]
-    player1_turn = GameEngine.play_round(GameEngine.via(1), player0, first)
-    player1 = turn_to_player(player1_turn)
-    state = :sys.get_state(GameEngine.via(1))
-    assert player1_turn == next_turn(player0)
-    assert length(state.rules.round_cards) == 1
-
-    player2_turn = GameEngine.pass_round(GameEngine.via(1), turn_to_player(player1_turn))
-    player2 = turn_to_player(player2_turn)
-
-    player0_turn = GameEngine.pass_round(GameEngine.via(1), turn_to_player(player2_turn))
-    state = :sys.get_state(GameEngine.via(1))
-    assert state.rules.round_cards == []
-    assert state.last.card == nil
-    assert state.last.meta == nil
-    assert length(state[player0][:hands]) == 19
-    assert length(state[player1][:hands]) == 17
-    assert length(state[player2][:hands]) == 17
-    assert state.rules.state == player0_turn
-
-    # first play0:play->player1:play->player2:pass->player0:pass->player1_turn
-    state = :sys.get_state(GameEngine.via(1))
-    first = [hd(state[player0][:hands])]
-    GameEngine.play_round(GameEngine.via(1), player0, first)
-    first1_all = state[player1][:hands]
-    state = :sys.get_state(GameEngine.via(1))
-    assert state.last.meta == :single
-    first1 = Enum.find(first1_all, fn x -> x.value > hd(first).value end)
-    GameEngine.play_round(GameEngine.via(1), player1, [first1])
-    GameEngine.pass_round(GameEngine.via(1), player2)
-    GameEngine.pass_round(GameEngine.via(1), player0)
-
-    state = :sys.get_state(GameEngine.via(1))
-    assert state.rules.round_cards == []
-    assert length(state[player0][:hands]) == 18
-    assert length(state[player1][:hands]) == 16
-    assert length(state[player2][:hands]) == 17
-
+  defp all_joined_room(id) do
+    GameEngine.start_link(id)
+    pid = GameEngine.via(id)
+    player1 = GameEngine.player_join(pid)
+    player2 = GameEngine.player_join(pid)
+    player3 = GameEngine.player_join(pid)
+    [player1, player2, player3]
   end
 
   def next_turn(player) do
