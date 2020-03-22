@@ -17,10 +17,10 @@ defmodule Raw.Game.GameEngine do
   def player_get_ready(game, player), do: GenServer.call(game, {:get_ready, player})
 
   def pass_landlord(game, player),
-      do: GenServer.call(game, {:pass_landlord, player})
+    do: GenServer.call(game, {:pass_landlord, player})
 
   def accept_landlord(game, player),
-      do: GenServer.call(game, {:accept_landlord, player})
+    do: GenServer.call(game, {:accept_landlord, player})
 
   def play_round(game, player, cards), do: GenServer.call(game, {:play, player, cards})
 
@@ -108,17 +108,14 @@ defmodule Raw.Game.GameEngine do
 
   defp maybe_ready({:ok, state}) do
     if state.rule.rule_state == :landlord_electing do
-      {
-        :reply,
-        [
-          player0: state.player0.hands,
-          player1: state.player1.hands,
-          player2: state.player2.hands,
-          landlord: state.rule.landlord,
-          extra_cards: state.extra_cards
-        ],
-        state
-      }
+      state
+      |> reply_success(
+        player0: state.player0.hands,
+        player1: state.player1.hands,
+        player2: state.player2.hands,
+        landlord: state.rule.landlord,
+        extra_cards: state.extra_cards
+      )
     else
       {:reply, :ok, state}
     end
@@ -133,6 +130,8 @@ defmodule Raw.Game.GameEngine do
   defp maybe_pass({:error, state}), do: {:reply, :error, state}
 
   defp maybe_pass({:ok, player, state}), do: {:reply, player, state}
+
+  defp maybe_pass({:restart, state}), do: {:reply, :restart, state}
 
   def update_rules(state, rules) do
     %{state | rules: rules}
@@ -159,15 +158,6 @@ defmodule Raw.Game.GameEngine do
     |> add_hands(:player2, t)
     |> add_hands(:landlord_cards, l)
     |> update_rules(rules)
-  end
-
-  def deal_finished(state) do
-    with {:ok, rules} <- GameRule.check(Map.fetch!(state, :rules), :deal_finished) do
-      state
-      |> update_rules(rules)
-    else
-      :error -> {:reply, :error, state}
-    end
   end
 
   def update_last_cards_and_type(state, cards, meta) do

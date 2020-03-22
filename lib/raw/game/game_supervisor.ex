@@ -1,6 +1,6 @@
 defmodule Raw.Game.GameSupervisor do
   use DynamicSupervisor
-  alias Raw.Game.Game
+  alias Raw.Game.GameEngine
 
   def start_link(_) do
     DynamicSupervisor.start_link(__MODULE__, :ok, name: __MODULE__)
@@ -12,7 +12,7 @@ defmodule Raw.Game.GameSupervisor do
   end
 
   def start_game(guid) do
-    spec = {Game, guid}
+    spec = {GameEngine, guid}
     DynamicSupervisor.start_child(__MODULE__, spec)
   end
 

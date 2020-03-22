@@ -14,17 +14,32 @@ import "phoenix_html"
 // Import local files
 //
 // Local files can be imported directly using relative paths, for example:
-/*
-* omit elm
-import { Elm } from "../elm/src/Main.elm"
+
+import { Elm } from "../elm/src/Game.elm"
+import socket from "./socket"
 
 const elmDiv = document.getElementById("elm-main")
-Elm.Main.init({ node: elmDiv })
-*/
+let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 
+var app =Elm.Game.init({ node: elmDiv,flags:{csrfToken:csrfToken}})
+
+let channel;
+let player;
+app.ports.joinRoom.subscribe(joinRoom)
+function joinRoom(roomId){
+    channel = socket.channel(`room:${roomId}`, {})
+    channel.join()
+        .receive("ok",res=>{app.ports.receive(res)})
+}
+
+
+
+/*
+for liveview
 import {Socket} from "phoenix"
 import LiveSocket from "phoenix_live_view"
 
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 let liveSocket = new LiveSocket("/live", Socket, {params: {_csrf_token: csrfToken}})
 liveSocket.connect()
+*/

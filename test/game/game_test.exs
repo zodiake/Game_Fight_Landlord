@@ -68,6 +68,21 @@ defmodule Raw.Game.GameTest do
              String.to_existing_atom(to_string(GameRule.next_player(h4)) <> "_turn")
   end
 
+  test "all pass should restart" do
+    [p1, p2, p3] = all_joined_room(1)
+    pid = GameEngine.via(1)
+    assert GameEngine.player_get_ready(pid, p1) == :ok
+    assert GameEngine.player_get_ready(pid, p2) == :ok
+
+    [player0: h1, player1: h2, player2: h3, landlord: h4, extra_cards: h5] =
+      GameEngine.player_get_ready(pid, p3)
+
+    np = GameEngine.pass_landlord(pid, h4)
+    np = GameEngine.pass_landlord(pid, np)
+    np = GameEngine.pass_landlord(pid, np)
+    assert :sys.get_state(pid).rule.rule_state == :waiting_start
+  end
+
   defp all_joined_room(id) do
     GameEngine.start_link(id)
     pid = GameEngine.via(id)

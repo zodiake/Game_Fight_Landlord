@@ -2,13 +2,19 @@ module Login exposing (..)
 
 import Html exposing (Html, button, div, form, h1, input, label)
 import Html.Attributes exposing (class, for, id, placeholder, type_)
+import Html.Events exposing (onClick, onInput)
 import Http
-import Json.Decode exposing (Decoder, decodeString, field, int, string, succeed)
+import Json.Decode exposing (Decoder, field, list, string, succeed)
 import Json.Decode.Pipeline exposing (required)
+import Json.Encode as D
 
 
 
 -- Model
+
+
+type alias Account =
+    { name : String, password : String }
 
 
 init : ( Account, Cmd Msg )
@@ -16,65 +22,94 @@ init =
     ( Account "" "", Cmd.none )
 
 
-type alias Account =
-    { name : String, password : String }
-
-
 type alias Response =
-    { status : String }
+    { status : String, reasons : List String }
 
 
 type alias Model =
-    { account : Maybe Account, error : String }
+    { account : Account, response : Response }
 
 
-accountDecoder : Decoder Response
-accountDecoder =
-    succeed Response |> required "status" string
+responseDecoder : Decoder Response
+responseDecoder =
+    succeed Response |> required "status" string |> required "reasons" (list string)
 
 
 
 --Msg
 
 
+type Field
+    = Name
+    | Password
+
+
 type Msg
-    = Submit
-    | LoadAccount (Result Http.Error Response)
+    = Update Field String
+    | SubmissionResult (Result Http.Error Response)
+    | Submit
 
 
 
 -- update
 
 
+updateAccount : Field -> String -> Account -> Account
+updateAccount field value account =
+    case field of
+        Name ->
+            { account | name = value }
+
+        Password ->
+            { account | password = value }
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        Update field a ->
+            ( { model | account = updateAccount field a model.account }, Cmd.none )
+
         Submit ->
-            ( model, login )
+            ( model, login model )
 
-        LoadAccount (Ok res) ->
-            if res.status == "ok" then
-                ( model, Cmd.none )
+        SubmissionResult (Ok res) ->
+            ( { model | response = res }, Cmd.none )
 
-            else
-                ( model, Cmd.none )
-
-
-enterHall : Model -> Html Msg
-enterHall model =
-    div [] []
+        SubmissionResult (Err err) ->
+            ( { model | response = Response "error" [ "wrong password or username" ] }, Cmd.none )
 
 
-login :Model-> Cmd Msg
-login =
-    Http.get
+encodeBody : Model -> D.Value
+encodeBody model =
+    D.object [ ( "name", D.string model.account.password ) ]
+
+
+login : Model -> Cmd Msg
+login model =
+    Http.post
         { url = "/login"
-        , expect = Http.expectJson LoadAccount accountDecoder
+        , body = Http.jsonBody (encodeBody model)
+        , expect = Http.expectJson SubmissionResult responseDecoder
         }
 
 
 
 --view
+
+
+inputText : String -> Field -> Html Msg
+inputText name field =
+    input [ class "form-control", placeholder name, id name, onInput (Update field) ] []
+
+
+viewError : List String -> Html Msg
+viewError errors =
+    let
+        error =
+            List.map (\err -> div [] [ err ]) errors
+    in
+    div [] [ error ]
 
 
 view : Model -> Html Msg
@@ -83,9 +118,10 @@ view model =
         [ form [ class "form-signi" ]
             [ h1 [ class "h3 mb-3 font-weight-normal" ] []
             , label [ class "sr-only", for "name" ] []
-            , input [ class "form-control", placeholder "UserName", id "name" ] []
+            , inputText "name" Name
             , label [ class "sr-only", for "password" ] []
-            , input [ class "form-control", placeholder "Password", id "password" ] []
-            , button [ class "btn btn-lg btn-primary btn-block", type_ "submit" ] []
+            , inputText "password" Password
+            , button [ class "btn btn-lg btn-primary btn-block", type_ "submit", onClick Submit ] []
             ]
+        , viewError model.response.reasons
         ]

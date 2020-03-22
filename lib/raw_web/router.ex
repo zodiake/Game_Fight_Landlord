@@ -4,7 +4,7 @@ defmodule RawWeb.Router do
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
-    #plug :fetch_flash
+    # plug :fetch_flash
     plug :fetch_live_flash
     plug :protect_from_forgery
     plug :put_secure_browser_headers
@@ -15,18 +15,19 @@ defmodule RawWeb.Router do
     plug :accepts, ["json"]
 
     plug Plug.Parsers,
-         parsers: [:urlencoded, :multipart, :json],
-         pass: ["*/*"],
-         json_decoder: Jason
+      parsers: [:urlencoded, :multipart, :json],
+      pass: ["*/*"],
+      json_decoder: Jason
   end
 
   scope "/", RawWeb do
     pipe_through :browser
 
     get "/", PageController, :index
-    get "/account", AccountController,:index
+    get "/account", AccountController, :index
     post "/account", AccountController, :create
-    live "/game", GameLive
+    post "/game", GameController, :create
+    get "/game", GameController,:index
   end
 
   scope "/game", RawWeb do

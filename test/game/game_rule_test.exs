@@ -40,7 +40,7 @@ defmodule Raw.Game.GameRuleTest do
     assert rules.rule_state == :landlord_electing
     assert rules.landlord != nil
 
-    {:ok, _, nr} =
+    {:ok, nr} =
       rules
       |> GameRule.check({:pass_landlord, rules.landlord})
 

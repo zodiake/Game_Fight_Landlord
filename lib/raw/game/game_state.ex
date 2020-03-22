@@ -57,11 +57,11 @@ defmodule Raw.Game.GameState do
       :error ->
         state |> fail()
 
-      {:ok, player, rule} ->
-        {:ok, player, state |> update_rule(rule)}
-
       {:ok, rule} ->
-        {:ok, state |> update_rule(rule)}
+        {:ok, rule.landlord, state |> update_rule(rule)}
+
+      {:restart, rule} ->
+        {:restart, state |> update_rule(rule)}
     end
   end
 

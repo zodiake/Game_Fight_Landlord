@@ -22,8 +22,8 @@ defmodule Raw.Game.GameRule do
       player = String.to_atom("player" <> to_string(rem(absent, 3)))
 
       game_rule
-      |> Map.put(player, :joined_room)
-      |> Map.put(:absent, absent - 1)
+      |> update_player_state(player, :joined_room)
+      |> update_absent(&(&1 - 1))
       |> reply_success(player)
     else
       :error
@@ -33,18 +33,18 @@ defmodule Raw.Game.GameRule do
   def check(%GameRule{rule_state: :waiting_start} = game_rule, {:get_ready, player}) do
     case Map.fetch!(game_rule, player) do
       :joined_room ->
-        rules =
+        rule =
           game_rule
-          |> Map.put(player, :get_ready)
+          |> update_player_state(player, :get_ready)
 
-        if all_players_get_ready(rules) do
-          rules
-          |> Map.put(player, :get_ready)
+        if all_players_get_ready(rule) do
+          rule
+          |> update_player_state(player, :get_ready)
           |> update_landlord(random_landlord())
           |> update_state(:landlord_electing)
           |> reply_success
         else
-          rules
+          rule
           |> reply_success
         end
 
@@ -54,19 +54,12 @@ defmodule Raw.Game.GameRule do
   end
 
   def check(%GameRule{rule_state: :landlord_electing} = game_rule, {:pass_landlord, player}) do
-    if game_rule.landlord == player and game_rule.give_up < 3 do
-      new_rule =
-        game_rule
-        |> update_give_up()
-        |> update_landlord(next_player(player))
+    rule = game_rule |> add_give_up
 
-      {:ok, new_rule.landlord, new_rule}
+    if rule.give_up == 3 do
+      {:restart, %GameRule{}}
     else
-      if game_rule.give_up == 3 do
-        {:ok, %GameRule{}}
-      else
-        :error
-      end
+      rule |> update_landlord(next_player(player)) |> reply_success
     end
   end
 
@@ -116,7 +109,7 @@ defmodule Raw.Game.GameRule do
 
   def random_landlord(), do: Enum.random([:player0, :player1, :player2])
 
-  def update_give_up(rule) do
+  def add_give_up(rule) do
     %GameRule{rule | give_up: rule.give_up + 1}
   end
 
@@ -150,5 +143,13 @@ defmodule Raw.Game.GameRule do
       :player1 -> :player2
       :player2 -> :player0
     end
+  end
+
+  defp update_player_state(rule, player, state) do
+    Map.put(rule, player, state)
+  end
+
+  defp update_absent(rule, fun) do
+    %__MODULE__{rule | absent: fun.(rule.absent)}
   end
 end

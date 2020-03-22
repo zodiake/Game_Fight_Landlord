@@ -1,11 +1,15 @@
-module Game exposing (..)
+module Game exposing (main)
 
 import Browser
 import Card exposing (Card, getCardUnicode, testCards)
-import Html exposing (Html, button, div, li, section, text, ul)
+import Html exposing (Html, button, div, input, li, section, text, ul)
 import Html.Attributes exposing (class)
-import Html.Events exposing (onClick)
+import Html.Events exposing (onClick, onInput)
+import Http exposing (header)
+import Json.Decode as Decode exposing (decodeString, string)
+import Json.Encode as Encode
 import List exposing (map)
+import WebSocket as WS
 
 
 
@@ -13,133 +17,157 @@ import List exposing (map)
 
 
 main =
-    Browser.sandbox { init = init, update = update, view = view }
+    Browser.element { init = init, update = update, view = view, subscriptions = sub }
 
 
 
 -- MODEL
 
 
+type alias Room =
+    { roomId : String }
+
+
+type alias Game =
+    { playerReference : String, handsCard : List String, lastCard : List String }
+
+
+type alias Flags =
+    { csrfToken : String }
+
+
 type alias Model =
-    { inHands : List Card, last : List Card }
+    { room : Room, game : Game, errs : List String, token : String }
 
 
-init : Model
-init =
-    { inHands = testCards, last = testCards }
+init : Flags -> ( Model, Cmd msg )
+init flags =
+    let
+        room =
+            Room ""
+
+        game =
+            Game "" [] []
+    in
+    ( Model room game [] flags.csrfToken, Cmd.none )
+
+
+type Msg
+    = CreateRoom
+    | JoinRoom
+    | Player (Result Decode.Error String)
+    | CreateRoomResponse (Result Http.Error String)
+    | UpdateRoomId String
 
 
 
 -- UPDATE
 
 
-type Msg
-    = SelectCard Card
-    | DealCards
-    | Pass
+fetch : Model -> String -> Cmd Msg
+fetch model id =
+    Http.request
+        { url = "/game/" ++ id
+        , method = "post"
+        , body = Http.jsonBody <| encodeCreate <| id
+        , expect = Http.expectString CreateRoomResponse
+        , timeout = Nothing
+        , tracker = Nothing
+        , headers = [ header "x-csrf-token" model.token ]
+        }
 
 
-update : Msg -> Model -> Model
+encodeCreate : String -> Encode.Value
+encodeCreate id =
+    Encode.object [ ( "roomId", Encode.string id ) ]
+
+
+createRoom : Model -> String -> Cmd Msg
+createRoom model id =
+    fetch model id
+
+
+errDecoder : Http.Error -> List String
+errDecoder err =
+    case err of
+        _ ->
+            [ "server error" ]
+
+
+updateErrors : List String -> Model -> Model
+updateErrors errs model =
+    { model | errs = List.append errs model.errs }
+
+
+updateRoomId : String -> Room -> Room
+updateRoomId id room =
+    { room | roomId = id }
+
+
+updateRoom : (Room -> Room) -> Model -> Model
+updateRoom fn model =
+    { model | room = fn model.room }
+
+
+updateGameReference : String -> Game -> Game
+updateGameReference ref game =
+    { game | playerReference = ref }
+
+
+updateGame : (Game -> Game) -> Model -> Model
+updateGame fn model =
+    { model | game = fn model.game }
+
+
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        SelectCard selected ->
-            { model | inHands = updateCards toggleSelected selected model.inHands }
+        CreateRoom ->
+            ( model, createRoom model model.room.roomId )
 
-        DealCards ->
-            { model | inHands = dropSelected model.inHands }
+        JoinRoom ->
+            ( model, WS.joinRoom model.room.roomId )
 
-        Pass ->
-            { model | inHands = dropSelected model.inHands }
+        UpdateRoomId id ->
+            ( updateRoom (updateRoomId id) model, Cmd.none )
 
+        CreateRoomResponse (Ok result) ->
+            ( updateErrors [ "create room" ] model, Cmd.none )
 
-dropSelected : List Card -> List Card
-dropSelected cards =
-    List.filter
-        (\card ->
-            if card.selected then
-                False
+        CreateRoomResponse (Err err) ->
+            ( updateErrors (errDecoder err) model, Cmd.none )
 
-            else
-                True
-        )
-        cards
+        Player (Ok reference) ->
+            ( { model | game = updateGameReference reference model.game }, Cmd.none )
 
-
-toggleSelected : Card -> Card
-toggleSelected card =
-    { card | selected = not card.selected }
-
-
-updateCards : (Card -> Card) -> Card -> List Card -> List Card
-updateCards fun selected cards =
-    List.map
-        (\card ->
-            if card.color == selected.color && card.value == selected.value then
-                fun card
-
-            else
-                card
-        )
-        cards
-
-
-cardView : Card -> Html Msg
-cardView card =
-    let
-        selectedClass =
-            if card.selected == True then
-                "card-selected"
-
-            else
-                ""
-
-        fontColor =
-            if card.color == "Diamond" || card.color == "Heart" then
-                "red-card"
-
-            else
-                "black-card"
-    in
-    li [ class "card", class selectedClass, class fontColor, onClick (SelectCard card) ] [ text (getCardUnicode card) ]
+        Player (Err err) ->
+            ( updateErrors [ "join room fail" ] model, Cmd.none )
 
 
 
--- VIEW
+--sub
 
 
-cardsView : List Card -> Html Msg
-cardsView inHands =
-    ul [ class "hands" ]
-        (List.map cardView inHands)
+sub : Model -> Sub Msg
+sub model =
+    WS.receive (Player << decodeString string)
 
 
-poolsView : List Card -> Html Msg
-poolsView last =
-    ul [ class "pools" ]
-        (List.map cardView last)
+
+--view
 
 
-buttonView : Html Msg
-buttonView =
-    div []
-        [ button [ onClick DealCards ]
-            [ text "deal"
-            ]
-        , button
-            [ onClick Pass ]
-            [ text "pass"
-            ]
-        ]
+viewErrors : String -> Html Msg
+viewErrors errs =
+    div [] [ text errs ]
 
 
 view : Model -> Html Msg
 view model =
     section []
-        [ div []
-            [ poolsView model.last
-            ]
-        , buttonView
-        , div []
-            [ cardsView model.inHands
-            ]
+        [ button [ onClick CreateRoom ] [ text "createRoom" ]
+        , button [ onClick JoinRoom ] [ text "joinRoom" ]
+        , input [ class "form-control", onInput UpdateRoomId ] []
+        , div [] (List.map viewErrors model.errs)
+        , div [] [ text model.token ]
         ]
