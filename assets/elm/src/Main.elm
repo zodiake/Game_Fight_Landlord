@@ -1,19 +1,34 @@
 module Main exposing (main)
 
-import Browser
-import Card exposing (Card, getCardUnicode, testCards)
-import Html exposing (Html, button, div, li, section, text, ul)
-import Html.Attributes exposing (class)
-import Html.Events exposing (onClick)
-import List exposing (map)
+import Account
+import Browser exposing (Document, UrlRequest)
+import Browser.Navigation as Navigation
+import Html exposing (Html, div)
+import Platform.Cmd as Subscriptions
+import Routes exposing (Route)
+import Url exposing (Url)
 
 
 
 -- MAIN
 
 
+type Page
+    = Account Account.Model
+    | Game
+    | Hall
+    | NotFound
+
+
 main =
-    Browser.sandbox { init = init, update = update, view = view }
+    Browser.application
+        { init = init
+        , update = update
+        , view = view
+        , subscriptions = subs
+        , onUrlRequest = Visit
+        , onUrlChange = Routes.match >> NewRoute
+        }
 
 
 
@@ -21,125 +36,76 @@ main =
 
 
 type alias Model =
-    { inHands : List Card, last : List Card }
+    { page : Page, navigationKey : Navigation.Key }
 
 
-init : Model
-init =
-    { inHands = testCards, last = testCards }
+initModel : Navigation.Key -> Model
+initModel nk =
+    { page = NotFound, navigationKey = nk }
 
 
 
--- UPDATE
+-- init
+
+
+init : () -> Url -> Navigation.Key -> ( Model, Cmd msg )
+init () url key =
+    ( initModel key, Cmd.none )
 
 
 type Msg
-    = SelectCard Card
-    | DealCards
-    | Pass
-
-
-update : Msg -> Model -> Model
-update msg model =
-    case msg of
-        SelectCard selected ->
-            { model | inHands = updateCards toggleSelected selected model.inHands }
-
-        DealCards ->
-            { model | inHands = dropSelected model.inHands }
-
-        Pass ->
-            { model | inHands = dropSelected model.inHands }
-
-
-dropSelected : List Card -> List Card
-dropSelected cards =
-    List.filter
-        (\card ->
-            if card.selected then
-                False
-
-            else
-                True
-        )
-        cards
-
-
-toggleSelected : Card -> Card
-toggleSelected card =
-    { card | selected = not card.selected }
-
-
-updateCards : (Card -> Card) -> Card -> List Card -> List Card
-updateCards fun selected cards =
-    List.map
-        (\card ->
-            if card.color == selected.color && card.value == selected.value then
-                fun card
-
-            else
-                card
-        )
-        cards
-
-
-cardView : Card -> Html Msg
-cardView card =
-    let
-        selectedClass =
-            if card.selected == True then
-                "card-selected"
-
-            else
-                ""
-
-        fontColor =
-            if card.color == "Diamond" || card.color == "Heart" then
-                "red-card"
-
-            else
-                "black-card"
-    in
-    li [ class "card", class selectedClass, class fontColor, onClick (SelectCard card) ] [ text (getCardUnicode card) ]
+    = NewRoute (Maybe Routes.Route)
+    | Visit UrlRequest
+    | AccountMsg Account.Msg
 
 
 
--- VIEW
+--view
 
 
-cardsView : List Card -> Html Msg
-cardsView inHands =
-    ul [ class "hands" ]
-        (List.map cardView inHands)
-
-
-poolsView : List Card -> Html Msg
-poolsView last =
-    ul [ class "pools" ]
-        (List.map cardView last)
-
-
-buttonView : Html Msg
-buttonView =
-    div []
-        [ button [ onClick DealCards ]
-            [ text "deal"
-            ]
-        , button
-            [ onClick Pass ]
-            [ text "pass"
-            ]
-        ]
-
-
-view : Model -> Html Msg
+view : Model -> Document Msg
 view model =
-    section []
-        [ div []
-            [ poolsView model.last
-            ]
-        , buttonView
-        , div []
-            [ cardsView model.inHands
-            ]
-        ]
+    let
+        ( title, body ) =
+            viewContent model.page
+    in
+    { title = title, body = [ body ] }
+
+
+viewContent : Page -> ( String, Html Msg )
+viewContent page =
+    case page of
+        Account model ->
+            ( "Account", Account.view model |> Html.map AccountMsg )
+
+        Game ->
+            ( "game", div [] [] )
+
+        Hall ->
+            ( "hall", div [] [] )
+
+        NotFound ->
+            ( "notfound", div [] [] )
+
+
+
+-- update
+
+
+update : Msg -> Model -> ( Model, Cmd Msg )
+update message model =
+    case message of
+        NewRoute (Just Account) ->
+            let
+                ( account, cmd ) =
+                    Account.init
+            in
+            ( { model | page = Account account }, Cmd.map AccountMsg cmd )
+
+        _ ->
+            ( model, Cmd.none )
+
+
+subs : Model -> Sub Msg
+subs model =
+    Sub.none

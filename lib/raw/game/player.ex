@@ -1,5 +1,5 @@
 defmodule Raw.Game.Player do
-  defstruct name: "",
+  defstruct name: nil,
             hands: []
 
   @type t() :: %__MODULE__{name: binary, hands: List.t()}

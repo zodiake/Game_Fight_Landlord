@@ -5,61 +5,82 @@ defmodule Raw.Game.GameRule do
   @max_entered 3
   defstruct rule_state: :waiting_start,
             round: %Round{},
-            absent: 3,
-            player0: :not_set,
-            player1: :not_set,
-            player2: :not_set,
-            extra_cards: [],
+            players: [
+              player0: :not_set,
+              player1: :not_set,
+              player2: :not_set
+            ],
             landlord: nil,
-            give_up: 0
+            give_up: []
 
   def new(), do: %GameRule{}
 
-  def check(%GameRule{rule_state: :waiting_start} = game_rule, :add_player) do
-    absent = game_rule.absent
+  def check(%GameRule{rule_state: :waiting_start} = rule, :add_player) do
+    case rule.players
+         |> find_absent do
+      [] ->
+        :error
 
-    if absent > 0 do
-      player = String.to_atom("player" <> to_string(rem(absent, 3)))
+      [h | t] ->
+        key =
+          h
+          |> elem(0)
 
-      game_rule
-      |> update_player_state(player, :joined_room)
-      |> update_absent(&(&1 - 1))
-      |> reply_success(player)
-    else
-      :error
+        players =
+          rule.players
+          |> update_player(key, :joined_room)
+
+        {:ok, key, update_players(rule, players)}
     end
   end
 
-  def check(%GameRule{rule_state: :waiting_start} = game_rule, {:get_ready, player}) do
-    case Map.fetch!(game_rule, player) do
+  def check(%GameRule{rule_state: :waiting_start} = rule, {:get_ready, player}) do
+    case Keyword.get(rule.players, player) do
       :joined_room ->
-        rule =
-          game_rule
-          |> update_player_state(player, :get_ready)
+        players = update_player(rule.players, player, :get_ready)
 
-        if all_players_get_ready(rule) do
-          rule
-          |> update_player_state(player, :get_ready)
-          |> update_landlord(random_landlord())
-          |> update_state(:landlord_electing)
-          |> reply_success
+        if all_players_get_ready(players) do
+          rule =
+            rule
+            |> update_players(players)
+            |> update_landlord(random_landlord)
+            |> update_state(:landlord_electing)
+
+          {:ok, rule}
         else
-          rule
-          |> reply_success
+          rule =
+            rule
+            |> update_players(players)
+
+          {:ok, rule}
         end
 
-      :get_ready ->
+      _ ->
         :error
     end
   end
 
-  def check(%GameRule{rule_state: :landlord_electing} = game_rule, {:pass_landlord, player}) do
-    rule = game_rule |> add_give_up
+  def check(%GameRule{rule_state: :landlord_electing} = rule, {:pass_landlord, player}) do
+    case Enum.member?(rule.give_up, player) do
+      true ->
+        :error
 
-    if rule.give_up == 3 do
-      {:restart, %GameRule{}}
-    else
-      rule |> update_landlord(next_player(player)) |> reply_success
+      false ->
+        rule =
+          rule
+          |> add_give_up(player)
+
+        if length(rule.give_up) == 3 do
+          {:restart, %GameRule{}}
+        else
+          next_player = next_player(player)
+
+          {
+            :ok,
+            rule
+            |> update_landlord(next_player)
+          }
+        end
     end
   end
 
@@ -67,7 +88,7 @@ defmodule Raw.Game.GameRule do
     if game_rule.landlord == player do
       game_rule
       |> update_state(:game_start)
-      |> update_round(player)
+      |> update_round(&Round.update_first_hand(&1, player))
       |> reply_success
     else
       :error
@@ -103,14 +124,16 @@ defmodule Raw.Game.GameRule do
 
   def check(_rule, _state), do: :error
 
-  def all_players_get_ready(rules) do
-    rules.player1 == :get_ready && rules.player2 == :get_ready && rules.player0 == :get_ready
+  def all_players_get_ready(players) do
+    players
+    |> Keyword.values()
+    |> Enum.all?(&(&1 == :get_ready))
   end
 
   def random_landlord(), do: Enum.random([:player0, :player1, :player2])
 
-  def add_give_up(rule) do
-    %GameRule{rule | give_up: rule.give_up + 1}
+  def add_give_up(rule, player) do
+    %GameRule{rule | give_up: [player | rule.give_up]}
   end
 
   def update_state(rule, state), do: %GameRule{rule | rule_state: state}
@@ -125,13 +148,13 @@ defmodule Raw.Game.GameRule do
     end
   end
 
-  def update_round(rule, player) do
-    turn = String.to_existing_atom(to_string(player) <> "_turn")
-    round = %Round{rule.round | turn: turn}
-    %GameRule{rule | round: round}
+  def update_round(rule, fun) do
+    %GameRule{rule | round: fun.(rule.round)}
   end
 
-  def update_landlord(rule, player), do: %__MODULE__{rule | landlord: player}
+  def update_landlord(rule, player) do
+    %__MODULE__{rule | landlord: player}
+  end
 
   def reply_success(rule), do: {:ok, rule}
 
@@ -145,11 +168,20 @@ defmodule Raw.Game.GameRule do
     end
   end
 
+  defp find_absent(players) do
+    players
+    |> Enum.filter(fn {_k, v} -> v == :not_set end)
+  end
+
   defp update_player_state(rule, player, state) do
     Map.put(rule, player, state)
   end
 
-  defp update_absent(rule, fun) do
-    %__MODULE__{rule | absent: fun.(rule.absent)}
+  defp update_players(rule, players) do
+    %GameRule{rule | players: players}
+  end
+
+  defp update_player(players, player, state) do
+    Keyword.update!(players, player, fn _ -> state end)
   end
 end

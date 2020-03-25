@@ -1,6 +1,6 @@
 defmodule RawWeb.GameController do
   use RawWeb, :controller
-  alias Raw.Game.GameSupervisor
+  alias Raw.Game.{GameSupervisor, GameEngine}
   require Logger
 
   def index(conn, _params) do
@@ -9,17 +9,20 @@ defmodule RawWeb.GameController do
   end
 
   def create(conn, %{"id" => id} = params) do
-    IO.inspect(params)
-
-    with {:ok, pid} <- GameSupervisor.start_game(id) do
-      Logger.debug("pid is: #{inspect(pid)}")
-
-      conn
-      |> json("ok")
+    if GameSupervisor.pid_from_guid(id) == nil do
+      case GameSupervisor.start_game(id) do
+        {:ok, pid} ->
+          conn
+          |> json("ok")
+        {:error, _} ->
+          conn
+          |> put_status(403)
+          |> json("error")
+      end
     else
-      _ ->
-        conn
-        |> json("fail")
+      conn
+      |> put_status(403)
+      |> json("error")
     end
   end
 end

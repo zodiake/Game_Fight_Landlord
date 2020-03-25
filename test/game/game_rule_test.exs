@@ -20,9 +20,9 @@ defmodule Raw.Game.GameRuleTest do
 
     assert rules.rule_state == :waiting_start
 
-    assert rules.player0 == :joined_room
-    assert rules.player2 == :joined_room
-    assert rules.player1 == :joined_room
+    assert Keyword.get(rules.players, :player0) == :joined_room
+    assert Keyword.get(rules.players, :player1) == :joined_room
+    assert Keyword.get(rules.players, :player2) == :joined_room
   end
 
   test "game should start after all player get_ready" do
@@ -44,12 +44,13 @@ defmodule Raw.Game.GameRuleTest do
       rules
       |> GameRule.check({:pass_landlord, rules.landlord})
 
-    assert nr.give_up == 1
+    assert nr.give_up == [rules.landlord]
     assert nr.rule_state == :landlord_electing
     landlord = GameRule.next_player(rules.landlord)
-    {:ok, nnr} = nr
+    {:ok, nr} = nr
                  |> GameRule.check({:accept_landlord, landlord})
-    assert nnr.rule_state == :game_start
-    assert nnr.round.turn == String.to_atom(to_string(landlord) <> "_turn")
+    assert nr.rule_state == :game_start
+    assert nr.round.first_hand == landlord
+    assert nr.round.turn == []
   end
 end

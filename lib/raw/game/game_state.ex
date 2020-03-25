@@ -1,12 +1,11 @@
 defmodule Raw.Game.GameState do
   alias Raw.Game.{GameRule, Card, Player}
+  require Logger
   @type t() :: %__MODULE__{id: integer}
 
   defstruct id: nil,
-            player0: %Player{},
-            player1: %Player{},
-            player2: %Player{},
-            landlord: %Player{},
+            players: [player0: %Player{}, player1: %Player{}, player2: %Player{}],
+            extra_cards: nil,
             rule: %GameRule{},
             last_round: nil
 
@@ -14,6 +13,16 @@ defmodule Raw.Game.GameState do
 
   def new(id) do
     %__MODULE__{%__MODULE__{} | id: id}
+  end
+
+  def update_state(state, :player_join) do
+    case GameRule.check(state.rule, :add_player) do
+      {:ok, player, rule} ->
+        {:ok, player, state |> update_rule(rule)}
+
+      :error ->
+        :error
+    end
   end
 
   def player_joined(state) do
@@ -30,7 +39,7 @@ defmodule Raw.Game.GameState do
     case GameRule.check(state.rule, {:get_ready, player}) do
       {:ok, rule} ->
         if rule.rule_state == :landlord_electing do
-          state |> deal_cards(rule) |> success
+          state
         else
           state
           |> update_rule(rule)
@@ -74,17 +83,6 @@ defmodule Raw.Game.GameState do
       |> Player.add_hands(cards)
 
     Map.put(state, player, p)
-  end
-
-  defp deal_cards(state, rule) do
-    [f, s, t, l] = Card.deal_cards(Card.new())
-
-    state
-    |> update_rule(rule)
-    |> add_player_cards(:player0, f)
-    |> add_player_cards(:player1, s)
-    |> add_player_cards(:player2, t)
-    |> Map.put(:extra_cards, l)
   end
 
   defp success(state) do

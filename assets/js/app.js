@@ -29,9 +29,17 @@ app.ports.joinRoom.subscribe(joinRoom)
 function joinRoom(roomId){
     channel = socket.channel(`room:${roomId}`, {})
     channel.join()
-        .receive("ok",res=>{app.ports.receive(res)})
+        .receive("ok",res=>{
+        app.ports.receive.send("ok")
+    })
 }
-
+app.ports.getReady.subscribe(ready)
+function ready(){
+    channel.push("get_ready")
+    channel.on("ready",data=>{
+        console.log(data)
+    });
+}
 
 
 /*

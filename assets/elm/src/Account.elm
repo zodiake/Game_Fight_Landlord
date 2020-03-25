@@ -1,4 +1,4 @@
-module Login exposing (..)
+module Account exposing (..)
 
 import Html exposing (Html, button, div, form, h1, input, label)
 import Html.Attributes exposing (class, for, id, placeholder, type_)
@@ -17,22 +17,34 @@ type alias Account =
     { name : String, password : String }
 
 
-init : ( Account, Cmd Msg )
-init =
-    ( Account "" "", Cmd.none )
-
-
 type alias Response =
-    { status : String, reasons : List String }
+    { reasons : List String }
 
 
 type alias Model =
     { account : Account, response : Response }
 
 
+init : ( Model, Cmd Msg )
+init =
+    ( initModel, Cmd.none )
+
+
+initModel : Model
+initModel =
+    let
+        account =
+            { name = "", password = "" }
+
+        response =
+            { reasons = [] }
+    in
+    { account = account, response = response }
+
+
 responseDecoder : Decoder Response
 responseDecoder =
-    succeed Response |> required "status" string |> required "reasons" (list string)
+    succeed Response |> required "reasons" (list string)
 
 
 
@@ -77,7 +89,7 @@ update msg model =
             ( { model | response = res }, Cmd.none )
 
         SubmissionResult (Err err) ->
-            ( { model | response = Response "error" [ "wrong password or username" ] }, Cmd.none )
+            ( { model | response = Response [ "wrong password or username" ] }, Cmd.none )
 
 
 encodeBody : Model -> D.Value

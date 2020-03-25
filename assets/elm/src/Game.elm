@@ -55,7 +55,8 @@ init flags =
 type Msg
     = CreateRoom
     | JoinRoom
-    | Player (Result Decode.Error String)
+    | GetReady
+    | Player String
     | CreateRoomResponse (Result Http.Error String)
     | UpdateRoomId String
 
@@ -137,11 +138,11 @@ update msg model =
         CreateRoomResponse (Err err) ->
             ( updateErrors (errDecoder err) model, Cmd.none )
 
-        Player (Ok reference) ->
-            ( { model | game = updateGameReference reference model.game }, Cmd.none )
+        Player ok ->
+            ( updateErrors [ "joined" ] model, Cmd.none )
 
-        Player (Err err) ->
-            ( updateErrors [ "join room fail" ] model, Cmd.none )
+        GetReady ->
+            ( model, WS.getReady () )
 
 
 
@@ -150,7 +151,7 @@ update msg model =
 
 sub : Model -> Sub Msg
 sub model =
-    WS.receive (Player << decodeString string)
+    WS.receive Player
 
 
 
@@ -167,6 +168,7 @@ view model =
     section []
         [ button [ onClick CreateRoom ] [ text "createRoom" ]
         , button [ onClick JoinRoom ] [ text "joinRoom" ]
+        , button [ onClick GetReady ] [ text "get_ready" ]
         , input [ class "form-control", onInput UpdateRoomId ] []
         , div [] (List.map viewErrors model.errs)
         , div [] [ text model.token ]

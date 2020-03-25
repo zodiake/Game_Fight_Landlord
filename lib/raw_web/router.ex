@@ -26,13 +26,12 @@ defmodule RawWeb.Router do
     get "/", PageController, :index
     get "/account", AccountController, :index
     post "/account", AccountController, :create
-    post "/game", GameController, :create
-    get "/game", GameController,:index
   end
 
   scope "/game", RawWeb do
     pipe_through :api
 
+    get "/", GameController,:index
     post "/:id", GameController, :create
   end
 

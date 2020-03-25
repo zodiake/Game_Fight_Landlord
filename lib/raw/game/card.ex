@@ -62,24 +62,24 @@ defmodule Raw.Game.Card do
 
   @spec deal_cards(list_cards) :: list(list_cards)
   def deal_cards(cards) do
-    first_group = Enum.take(cards, @init_cards_num)
+    first = Enum.take(cards, @init_cards_num)
 
-    second_group =
+    second =
       cards
       |> Enum.drop(@init_cards_num)
       |> Enum.take(@init_cards_num)
 
-    third_group =
+    third =
       cards
       |> Enum.drop(@init_cards_num * 2)
       |> Enum.take(@init_cards_num)
 
-    landlord_group =
+    extra =
       cards
       |> Enum.drop(@init_cards_num * 3)
       |> Enum.take(3)
 
-    [first_group, second_group, third_group, landlord_group]
+    [first, second, third, extra]
   end
 
   @spec sort(list_cards) :: list_cards

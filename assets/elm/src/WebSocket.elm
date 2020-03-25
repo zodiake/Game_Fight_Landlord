@@ -1,10 +1,10 @@
-port module WebSocket exposing (joinRoom, receive)
-
-
-port getReady : String -> Cmd msg
+port module WebSocket exposing (getReady, joinRoom, receive)
 
 
 port joinRoom : String -> Cmd msg
+
+
+port getReady : () -> Cmd msg
 
 
 port receive : (String -> msg) -> Sub msg

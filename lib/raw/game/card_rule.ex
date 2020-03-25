@@ -2,15 +2,11 @@ defmodule Raw.Game.CardRule do
   @moduledoc false
   alias Raw.Game.Helper
 
-  def check(cards, :single) do
-    if length(cards) == 1 do
-      {:ok, :single}
-    else
-      :error
-    end
+  def check(cards, :single) when length(cards) == 1 do
+    {:ok, :single}
   end
 
-  def check(cards, :pairs) do
+  def check(cards, :pairs) when div(length(cards), 2) == 0 do
     case Helper.pairs_check(cards) do
       :error -> :error
       {:ok, :pairs} -> {:ok, :pairs}
