@@ -1,15 +1,15 @@
 defmodule Raw.Game.GameRule do
   alias __MODULE__
-  alias Raw.Game.Round
+  alias Raw.Game.{Round, Card}
   @moduledoc false
   @max_entered 3
   defstruct rule_state: :waiting_start,
-            round: %Round{},
             players: [
               player0: :not_set,
               player1: :not_set,
               player2: :not_set
             ],
+            round: %Round{},
             landlord: nil,
             give_up: []
 
@@ -88,17 +88,29 @@ defmodule Raw.Game.GameRule do
     if game_rule.landlord == player do
       game_rule
       |> update_state(:game_start)
-      |> update_round(&Round.update_first_hand(&1, player))
+      |> update_round(&Round.update_turn(&1, player))
       |> reply_success
     else
       :error
     end
   end
 
-  def check(%GameRule{rule_state: turn} = game_rule, {:play, player}) do
+  def check(%GameRule{rule_state: :round_start} = game_rule, {:play, player, cards}) do
+    turn = game_rule.round.turn
+    if turn! = player do
+      :error
+    else
+      if game_rule.round.round_history == [] do
+        game_rule
+        |> update_round(&Round.add_round_history(&1, player, cards))
+        |> reply_success
+      else
+        Card.compare()
+      end
+    end
   end
 
-  def check(%GameRule{rule_state: player_turn} = game_rule, {:pass, player}) do
+  def check(%GameRule{rule_state: :player_turn} = game_rule, {:pass, player}) do
   end
 
   def check(%GameRule{rule_state: :player0_turn} = game_rule, {:win_check, win_or_not}) do

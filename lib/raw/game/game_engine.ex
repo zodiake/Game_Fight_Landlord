@@ -33,7 +33,7 @@ defmodule Raw.Game.GameEngine do
           :reply,
           player,
           state
-          |> update_rule(rule)
+          |> GameState.update_rule(rule)
         }
 
       :error ->
@@ -45,10 +45,26 @@ defmodule Raw.Game.GameEngine do
     case GameRule.check(state.rule, {:get_ready, player}) do
       {:ok, rule} ->
         if rule.rule_state == :landlord_electing do
-          [f, s, t, e] = Card.new() |> Card.deal_cards()
-          {:reply, [f, s, t, e], state |> update_rule(rule)}
+          {e, players} = GameState.deal_cards(state)
+
+          hand_cards_extra_landlord =
+            {Enum.map(players, fn {k, v} -> {k, v.hands} end), e, rule.landlord}
+
+          {
+            :reply,
+            hand_cards_extra_landlord,
+            state
+            |> GameState.update_rule(rule)
+            |> GameState.update_players(players)
+            |> GameState.update_extra_cards(e)
+          }
         else
-          {:reply, :ok, state |> update_rule(rule)}
+          {
+            :reply,
+            :ok,
+            state
+            |> GameState.update_rule(rule)
+          }
         end
 
       :error ->
@@ -57,48 +73,45 @@ defmodule Raw.Game.GameEngine do
   end
 
   def handle_call({:accept_landlord, player}, _from, state) do
-    state
-    |> GameState.accept_landlord(player)
-    |> maybe_accept()
+    case GameRule.check(state.rule, {:accept_landlord, player}) do
+      :error ->
+        {:reply, :error, state}
+
+      {:ok, rule} ->
+        state
+        |> GameState.update_rule(rule)
+        |> GameState.add_player_cards(player, state.extra_cards)
+        |> reply_success(&Enum.map(&1.players, fn {k, v} -> {k, v.hands} end))
+    end
   end
 
   def handle_call({:pass_landlord, player}, _from, state) do
-    state
-    |> GameState.pass_landlord(player)
-    |> maybe_pass()
+    case GameRule.check(state.rule, {:pass_landlord, player}) do
+      {:restart, rule} ->
+        {
+          :reply,
+          :restart,
+          state
+          |> GameState.update_rule(rule)
+        }
+
+      {:ok, rule} ->
+        {
+          :reply,
+          rule.landlord,
+          state
+          |> GameState.update_rule(rule)
+        }
+    end
   end
 
   def handle_call({:play, player, cards}, _from, state) do
-    case state.last.card do
-      nil ->
-        with {:ok, meta} <-
-               CardRuleSelector.select_type(
-                 cards
-                 |> Card.extract_card_value()
-               ),
-             {:ok, new_rule} <- GameRule.check(state.rules, {:play, player}) do
-          state
-          |> update_last_cards_and_type(cards, meta)
-          |> update_rule(new_rule)
-          |> remove_hands(player, cards)
-          |> reply_success(new_rule.state)
-        else
-          :error ->
-            {:reply, :error, state}
-        end
+    case CardRuleSelector.select_type(cards) do
+      :error ->
+        {:reply, :error, state}
 
-      _ ->
-        with {:ok, new_rule} <- GameRule.check(state.rules, {:play, player}),
-             {:ok, meta} <- Card.compare({cards, state.last.card}, state.last.meta) do
-          state
-          |> update_last_cards_and_type(cards, meta)
-          |> update_rule(new_rule)
-          |> remove_hands(player, cards)
-          |> reply_success(new_rule.state)
-        else
-          :error ->
-            {:reply, :error, state}
-        end
+      {:ok, type} ->
+        GameRule.check(state.rule, {:play, player, cards})
     end
   end
 
@@ -106,13 +119,13 @@ defmodule Raw.Game.GameEngine do
     case GameRule.check(state.rules, {:pass, player}) do
       {:ok, rules, :round_over} ->
         state
-        |> update_rule(rules)
+        |> GameState.update_rule(rules)
         |> clear_last()
         |> reply_success(rules.state)
 
       {:ok, rules} ->
         state
-        |> update_rule(rules)
+        |> GameState.update_rule(rules)
         |> reply_success(rules.state)
 
       :error ->
@@ -151,31 +164,13 @@ defmodule Raw.Game.GameEngine do
 
   defp maybe_pass({:restart, state}), do: {:reply, :restart, state}
 
-  def update_rule(state, rules) do
-    %{state | rule: rules}
-  end
-
-  def reply_success(state, reply), do: {:reply, reply, state}
+  def reply_success(state, reply), do: {:reply, reply.(state), state}
 
   def reply_success(state), do: {:reply, state, state}
 
   def sort_hands(state, player) do
     cards = get_in(state, [player, :hands])
     put_in(state, [player, :hands], Enum.sort_by(cards, fn x -> x.value end))
-  end
-
-  def deal_cards(state, rules) do
-    [f, s, t, l] =
-      Card.new()
-      |> Card.shuffle()
-      |> Card.deal_cards()
-
-    state
-    |> add_hands(:player0, f)
-    |> add_hands(:player1, s)
-    |> add_hands(:player2, t)
-    |> add_hands(:landlord_cards, l)
-    |> update_rule(rules)
   end
 
   def update_last_cards_and_type(state, cards, meta) do
@@ -188,17 +183,12 @@ defmodule Raw.Game.GameEngine do
     put_in(state, [player, :hands], new_hands)
   end
 
-  def add_hands(state, player, cards) do
-    if state[player][:hands] == nil do
-      put_in(state, [player, :hands], cards)
-    else
-      put_in(state, [player, :hands], state[player][:hands] ++ cards)
-    end
-    |> sort_hands(player)
-  end
-
   def clear_last(state) do
     last = %{state.last | card: nil, meta: nil}
     %{state | last: last}
+  end
+
+  defp update_player_hands(state, [f, s, t, e]) do
+    Enum.zip(state.players)
   end
 end

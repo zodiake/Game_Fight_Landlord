@@ -50,7 +50,7 @@ defmodule Raw.Game.GameRuleTest do
     {:ok, nr} = nr
                  |> GameRule.check({:accept_landlord, landlord})
     assert nr.rule_state == :game_start
-    assert nr.round.first_hand == landlord
-    assert nr.round.turn == []
+    assert nr.round.turn == landlord
   end
+
 end

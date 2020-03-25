@@ -1,13 +1,12 @@
 defmodule Raw.Game.GameState do
-  alias Raw.Game.{GameRule, Card, Player}
+  alias Raw.Game.{GameRule, Card, Player, Round}
   require Logger
   @type t() :: %__MODULE__{id: integer}
 
   defstruct id: nil,
             players: [player0: %Player{}, player1: %Player{}, player2: %Player{}],
             extra_cards: nil,
-            rule: %GameRule{},
-            last_round: nil
+            rule: %GameRule{}
 
   @players [:player0, :player1, :player2]
 
@@ -25,14 +24,39 @@ defmodule Raw.Game.GameState do
     end
   end
 
-  def player_joined(state) do
-    case GameRule.check(state.rule, :add_player) do
-      {:ok, player, rule} ->
-        {:ok, player, update_rule(state, rule)}
+  def update_players(state, players) do
+    %__MODULE__{state | players: players}
+  end
 
-      :error ->
-        {:error, state}
-    end
+  def update_player(state, player, np) do
+    Keyword.update!(state.players, player, np)
+  end
+
+  def add_player_cards(state, player, cards) do
+    players =
+      Keyword.update!(
+        state.players,
+        player,
+        fn x -> Player.add_hands(x, cards) end
+      )
+
+    update_players(state, players)
+  end
+
+  def deal_cards(state) do
+    [f, s, t, e] =
+      Card.new()
+      |> Card.shuffle()
+      |> Card.deal_cards()
+
+    {e,
+     state.players
+     |> Enum.zip([f, s, t])
+     |> Enum.map(fn {{key, player}, cards} -> {key, Player.add_hands(player, cards)} end)}
+  end
+
+  def update_extra_cards(state, extra) do
+    %__MODULE__{state | extra_cards: extra}
   end
 
   def player_ready(state, player) do
@@ -74,16 +98,7 @@ defmodule Raw.Game.GameState do
     end
   end
 
-  defp update_rule(state, rule), do: %__MODULE__{state | rule: rule}
-
-  defp add_player_cards(state, player, cards) do
-    p =
-      state
-      |> Map.fetch!(player)
-      |> Player.add_hands(cards)
-
-    Map.put(state, player, p)
-  end
+  def update_rule(state, rule), do: %__MODULE__{state | rule: rule}
 
   defp success(state) do
     {:ok, state}

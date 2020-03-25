@@ -1,6 +1,18 @@
 defmodule Raw.Game.Round do
-  defstruct last: [],
-            first_hand: nil,
-            turn: []
-  def update_first_hand(round, player), do: %__MODULE__{round | first_hand: player}
+  alias Raw.Game.{Card, CardRuleSelector}
+
+  defstruct turn: nil,
+            round_history: []
+
+  def update_turn(round, player), do: %__MODULE__{round | turn: player}
+
+  def add_round_history(round, p, cards) do
+    %__MODULE__{
+      round
+      | round_history: [
+          %{player: p, cards: cards, type: CardRuleSelector.select_type(cards)}
+          | round.round_history
+        ]
+    }
+  end
 end
