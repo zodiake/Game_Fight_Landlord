@@ -1,26 +1,18 @@
 defmodule Raw.Accounts do
   alias Raw.Repo
   alias Raw.Accounts.User
+  @users ~w[tom,mary,peter]
 
-  def exist(%{"user" => %{"username" => username, "password" => password}}) do
-    source =
-      User
-      |> Repo.get_by(username: username)
-
-    check(source, password)
+  def auth_user(name, password) do
+    user = find_by_name(name)
+    if password == user.password do
+      true
+    else
+      false
+    end
   end
 
-  def check(user, password) do
-    case user do
-      nil ->
-        false
-
-      _ ->
-        if user.password == password do
-          true
-        else
-          false
-        end
-    end
+  def find_by_name(name) do
+    Repo.get_by(User, name: name)
   end
 end

@@ -8,6 +8,11 @@ defmodule RawWeb.GameController do
     |> render("index.html")
   end
 
+  def show(conn,_params) do
+    conn
+    |> render("show.html")
+  end
+
   def create(conn, %{"id" => id} = params) do
     if GameSupervisor.pid_from_guid(id) == nil do
       case GameSupervisor.start_game(id) do

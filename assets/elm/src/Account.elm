@@ -1,12 +1,12 @@
 module Account exposing (..)
 
-import Html exposing (Html, button, div, form, h1, input, label)
+import Html exposing (Html, button, div, form, h1, input, label, text)
 import Html.Attributes exposing (class, for, id, placeholder, type_)
 import Html.Events exposing (onClick, onInput)
-import Http
+import Http exposing (header)
 import Json.Decode exposing (Decoder, field, list, string, succeed)
 import Json.Decode.Pipeline exposing (required)
-import Json.Encode as D
+import Json.Encode as E
 
 
 
@@ -23,6 +23,10 @@ type alias Response =
 
 type alias Model =
     { account : Account, response : Response }
+
+
+type alias Flags =
+    { token : String }
 
 
 init : ( Model, Cmd Msg )
@@ -66,6 +70,11 @@ type Msg
 -- update
 
 
+encode : Model -> E.Value
+encode model =
+    E.object [ ( "name", E.string model.account.name ), ( "password", E.string model.account.password ) ]
+
+
 updateAccount : Field -> String -> Account -> Account
 updateAccount field value account =
     case field of
@@ -92,16 +101,11 @@ update msg model =
             ( { model | response = Response [ "wrong password or username" ] }, Cmd.none )
 
 
-encodeBody : Model -> D.Value
-encodeBody model =
-    D.object [ ( "name", D.string model.account.password ) ]
-
-
 login : Model -> Cmd Msg
 login model =
     Http.post
         { url = "/login"
-        , body = Http.jsonBody (encodeBody model)
+        , body = Http.jsonBody (encode model)
         , expect = Http.expectJson SubmissionResult responseDecoder
         }
 
@@ -119,9 +123,9 @@ viewError : List String -> Html Msg
 viewError errors =
     let
         error =
-            List.map (\err -> div [] [ err ]) errors
+            List.map (\err -> div [] [ text err ]) errors
     in
-    div [] [ error ]
+    div [] error
 
 
 view : Model -> Html Msg

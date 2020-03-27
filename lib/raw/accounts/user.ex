@@ -3,7 +3,7 @@ defmodule Raw.Accounts.User do
   import Ecto.Changeset
 
   schema "user" do
-    field :username, :string
+    field :name, :string
     field :password, :string, virtual: true
 
     timestamps()
@@ -11,8 +11,8 @@ defmodule Raw.Accounts.User do
 
   def changeset(user, attrs \\ %{}) do
     user
-    |> cast(attrs, [:username, :password])
-    |> validate_required([:username, :password])
-    |> unique_constraint(:username)
+    |> cast(attrs, [:name, :password])
+    |> validate_required([:name, :password])
+    |> unique_constraint(:name)
   end
 end

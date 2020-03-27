@@ -15,24 +15,27 @@ defmodule RawWeb.Router do
     plug :accepts, ["json"]
 
     plug Plug.Parsers,
-      parsers: [:urlencoded, :multipart, :json],
-      pass: ["*/*"],
-      json_decoder: Jason
+         parsers: [:urlencoded, :multipart, :json],
+         pass: ["*/*"],
+         json_decoder: Jason
+  end
+
+
+  scope "/api", RawWeb do
+    pipe_through :api
+
+    get "/game", GameController, :index
+    post "/game/:id", GameController, :create
+    get "/game/:id", GameController, :show
+    post "/login", SessionController, :create
   end
 
   scope "/", RawWeb do
     pipe_through :browser
 
-    get "/", PageController, :index
-    get "/account", AccountController, :index
-    post "/account", AccountController, :create
-  end
-
-  scope "/game", RawWeb do
-    pipe_through :api
-
-    get "/", GameController,:index
-    post "/:id", GameController, :create
+    get "/", AccountController, :index
+    post "/", AccountController, :create
+    get "/hall", HallController, :index
   end
 
   # Other scopes may use custom stacks.

@@ -22,15 +22,7 @@ defmodule Raw.Game.GameRule do
         :error
 
       [h | t] ->
-        key =
-          h
-          |> elem(0)
-
-        players =
-          rule.players
-          |> update_player(key, :joined_room)
-
-        {:ok, key, update_players(rule, players)}
+        {:ok, elem(h, 0), rule |> update_player(elem(h, 0), :joined_room)}
     end
   end
 
@@ -39,20 +31,22 @@ defmodule Raw.Game.GameRule do
       :joined_room ->
         players = update_player(rule.players, player, :get_ready)
 
-        if all_players_get_ready(players) do
-          rule =
-            rule
-            |> update_players(players)
-            |> update_landlord(random_landlord)
-            |> update_state(:landlord_electing)
+        case all_players_get_ready(players) do
+          true ->
+            rule =
+              rule
+              |> update_players(players)
+              |> update_landlord(random_landlord)
+              |> update_state(:landlord_electing)
 
-          {:ok, rule}
-        else
-          rule =
-            rule
-            |> update_players(players)
+            {:ok, rule}
 
-          {:ok, rule}
+          false ->
+            rule =
+              rule
+              |> update_players(players)
+
+            {:ok, rule}
         end
 
       _ ->
@@ -97,6 +91,7 @@ defmodule Raw.Game.GameRule do
 
   def check(%GameRule{rule_state: :round_start} = game_rule, {:play, player, cards}) do
     turn = game_rule.round.turn
+
     if turn! = player do
       :error
     else
@@ -104,8 +99,6 @@ defmodule Raw.Game.GameRule do
         game_rule
         |> update_round(&Round.add_round_history(&1, player, cards))
         |> reply_success
-      else
-        Card.compare()
       end
     end
   end
@@ -193,7 +186,11 @@ defmodule Raw.Game.GameRule do
     %GameRule{rule | players: players}
   end
 
-  defp update_player(players, player, state) do
-    Keyword.update!(players, player, fn _ -> state end)
+  defp update_player(rule, player, state) do
+    players =
+      rule.players
+      |> Keyword.update!(player, fn _ -> state end)
+
+    update_players(rule, players)
   end
 end

@@ -1,11 +1,11 @@
-module Routes exposing (Route, match)
+module Routes exposing (Route(..), match)
 
 import Url exposing (Url)
 import Url.Parser as Parser exposing ((</>), Parser)
 
 
 type Route
-    = Login
+    = Account
     | Hall
     | Game Int
 
@@ -13,7 +13,7 @@ type Route
 routes : Parser (Route -> a) a
 routes =
     Parser.oneOf
-        [ Parser.map Login Parser.top
+        [ Parser.map Account Parser.top
         , Parser.map Hall (Parser.s "hall")
         , Parser.map Game (Parser.s "game" </> Parser.int)
         ]

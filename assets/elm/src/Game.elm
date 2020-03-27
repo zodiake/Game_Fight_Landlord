@@ -1,4 +1,4 @@
-module Game exposing (main)
+module Game exposing (init)
 
 import Browser
 import Card exposing (Card, getCardUnicode, testCards)
@@ -10,14 +10,6 @@ import Json.Decode as Decode exposing (decodeString, string)
 import Json.Encode as Encode
 import List exposing (map)
 import WebSocket as WS
-
-
-
--- MAIN
-
-
-main =
-    Browser.element { init = init, update = update, view = view, subscriptions = sub }
 
 
 

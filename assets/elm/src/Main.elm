@@ -3,9 +3,10 @@ module Main exposing (main)
 import Account
 import Browser exposing (Document, UrlRequest)
 import Browser.Navigation as Navigation
-import Html exposing (Html, div)
-import Platform.Cmd as Subscriptions
-import Routes exposing (Route)
+import Game
+import Hall
+import Html exposing (Html, div, text)
+import Routes
 import Url exposing (Url)
 
 
@@ -16,7 +17,7 @@ import Url exposing (Url)
 type Page
     = Account Account.Model
     | Game
-    | Hall
+    | Hall Hall.Model
     | NotFound
 
 
@@ -48,15 +49,16 @@ initModel nk =
 -- init
 
 
-init : () -> Url -> Navigation.Key -> ( Model, Cmd msg )
+init : () -> Url -> Navigation.Key -> ( Model, Cmd Msg )
 init () url key =
-    ( initModel key, Cmd.none )
+    setNewPage (Routes.match url) (initModel key)
 
 
 type Msg
     = NewRoute (Maybe Routes.Route)
     | Visit UrlRequest
     | AccountMsg Account.Msg
+    | HallMsg Hall.Msg
 
 
 
@@ -81,11 +83,39 @@ viewContent page =
         Game ->
             ( "game", div [] [] )
 
-        Hall ->
-            ( "hall", div [] [] )
+        Hall model ->
+            ( "hall", Hall.view model |> Html.map HallMsg )
 
         NotFound ->
-            ( "notfound", div [] [] )
+            ( "notfound", div [] [ text "123" ] )
+
+
+setNewPage : Maybe Routes.Route -> Model -> ( Model, Cmd Msg )
+setNewPage maybe model =
+    case maybe of
+        Just Routes.Account ->
+            let
+                ( accountModel, cmd ) =
+                    Account.init
+            in
+            ( { model | page = Account accountModel }, Cmd.map AccountMsg cmd )
+
+        Just (Routes.Game roomId) ->
+            let
+                ( accountModel, cmd ) =
+                    Account.init
+            in
+            ( { model | page = Account accountModel }, Cmd.map AccountMsg cmd )
+
+        Just Routes.Hall ->
+            let
+                ( hallModel, cmd ) =
+                    Hall.init
+            in
+            ( { model | page = Hall hallModel }, Cmd.map HallMsg cmd )
+
+        _ ->
+            ( model, Cmd.none )
 
 
 
@@ -94,13 +124,9 @@ viewContent page =
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update message model =
-    case message of
-        NewRoute (Just Account) ->
-            let
-                ( account, cmd ) =
-                    Account.init
-            in
-            ( { model | page = Account account }, Cmd.map AccountMsg cmd )
+    case ( message, model ) of
+        ( NewRoute maybeRoute, _ ) ->
+            ( model, Cmd.none )
 
         _ ->
             ( model, Cmd.none )
